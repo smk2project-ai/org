@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="組織管理">
+<meta name="theme-color" content="#14315c">
+<title>組織管理</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root {
+    --navy: #14315c;
+    --navy-soft: #e8eff8;
+    --line: #c5cedc;
+    --orange: #b96a12;
+    --orange-soft: #fdf1e3;
+    --green: #17907d;
+    --green-soft: #e0f4f0;
+    --red: #b3403a;
+    --red-soft: #f8e4e4;
+    --text: #1d2939;
+    --muted: #667085;
+    --bg: #f5f7fb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  header { background: var(--navy); color: #fff; padding: 18px 16px; }
+  header .in { max-width: 1100px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
+  header .side { font-size: 12px; opacity: .85; text-align: right; }
+  header .side button { margin-left: 8px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .panel { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(20, 49, 92, .12); min-width: 0; }
+  /* 画面の幅より広がらないように（スマホで一度広がると、ほかのページも横にはみ出したままになるため） */
+  html { overflow-x: hidden; max-width: var(--vw, none); }
+  body { max-width: 100%; overflow-x: clip; } /* clip は横スクロールの箱を作らないので、詳細の追従（sticky）が効いたまま */
+  .panel h2 { margin: 0 0 10px; font-size: 16px; color: var(--navy); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .panel h2 small { font-size: 12px; color: var(--muted); font-weight: 400; }
+  button, select, input { font: inherit; color: var(--text); }
+  button {
+    cursor: pointer; border: 1px solid var(--navy); background: #fff; color: var(--navy);
+    border-radius: 999px; padding: 4px 14px;
+  }
+  button:hover { background: var(--navy-soft); }
+  button.main { background: var(--navy); color: #fff; }
+  button.ghost { border-color: var(--line); color: var(--muted); }
+  button.mini { padding: 1px 10px; font-size: 12px; }
+  input[type="text"], input[type="email"], input[type="search"], select {
+    padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; width: 100%;
+  }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 10px; margin-bottom: 12px; }
+  .tile { background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(20, 49, 92, .12); }
+  .tile .lbl { font-size: 12px; color: var(--muted); }
+  .tile .val { font-size: 26px; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .tile .val small { font-size: 13px; font-weight: 600; margin-left: 2px; }
+  .tile .sub { font-size: 12px; color: var(--muted); }
+  .tile[data-go] { cursor: pointer; }
+  .tile[data-go]:hover { box-shadow: 0 0 0 2px var(--navy-soft); }
+  .tile .sub[data-go] { cursor: pointer; text-decoration: underline; color: var(--orange); }
+
+  .focus {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    background: var(--navy-soft); border-radius: 12px; padding: 8px 14px; margin-bottom: 12px;
+  }
+  .focus b { color: var(--navy); }
+  .kubun { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .kubun button { border-color: var(--line); border-radius: 10px; min-width: 38px; padding: 4px 10px; font-weight: 700; color: var(--text); }
+  .kubun button.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .tools { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tools input { flex: 1 1 220px; }
+  .tabs { display: flex; gap: 4px; background: #e3e9f2; border-radius: 12px; padding: 4px; margin-bottom: 12px; overflow-x: auto; }
+  .tabs button { border: none; background: transparent; color: var(--muted); border-radius: 9px; padding: 6px 14px; white-space: nowrap; font-weight: 600; }
+  .tabs button.on { background: #fff; color: var(--navy); box-shadow: 0 1px 2px rgba(20, 49, 92, .15); }
+  .tabs .n { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: var(--orange-soft); color: var(--orange); font-size: 12px; }
+
+  .cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+  #detail { position: sticky; top: 12px; }
+  .empty { color: var(--muted); padding: 12px 0; }
+
+  /* 組織図（階層リスト） */
+  .tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+  .tree { overflow-x: auto; padding-bottom: 4px; } /* 階層が深いときは、この枠の中だけ横にスクロール */
+  .tree .row { min-width: 170px; }
+  .tree ul { margin-left: 13px; padding-left: 13px; border-left: 2px solid var(--line); }
+  .tree li { margin-top: 6px; }
+  .node { display: flex; align-items: stretch; gap: 6px; }
+  .tog {
+    flex: 0 0 26px; border: 1px solid var(--line); border-radius: 8px; padding: 0; color: var(--muted);
+    font-size: 12px; background: #fff;
+  }
+  .tog.none { visibility: hidden; }
+  .row {
+    flex: 1; min-width: 0; text-align: left; border: 1px solid var(--line); border-radius: 12px; padding: 7px 12px;
+    background: #fff; color: var(--text); display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .row:hover { background: #f8fafd; }
+  .row.sel { border-color: var(--green); box-shadow: 0 0 0 2px var(--green-soft); }
+  .row.me { background: var(--navy-soft); }
+  .row .left { flex: 1 1 auto; min-width: 0; }
+  .row .nm { display: block; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .meta { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .right { text-align: right; flex: 0 0 auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .list .row { margin-top: 6px; width: 100%; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 0 8px; vertical-align: middle; }
+  .badge.lv { background: var(--navy); color: #fff; }
+  .badge.ok { background: var(--green-soft); color: var(--green); }
+  .badge.ng { background: var(--red-soft); color: var(--red); }
+  .badge.wait { background: var(--orange-soft); color: var(--orange); }
+
+  /* 組織図（図で見る） */
+  .cols.wide { grid-template-columns: minmax(0, 1fr); }
+  .cols.wide #detail { position: static; }
+  .chartwrap { overflow: auto; padding: 4px 0 12px; }
+  .chart, .chart ul { list-style: none; margin: 0; padding: 0; }
+  .chart { display: inline-flex; min-width: 100%; justify-content: center; }
+  .chart ul { display: flex; justify-content: center; padding-top: 20px; position: relative; }
+  .chart li { position: relative; padding: 20px 6px 0; display: flex; flex-direction: column; align-items: center; }
+  .chart > li { padding-top: 0; }
+  .chart ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 20px; border-left: 2px solid var(--line); }
+  .chart ul > li::before, .chart ul > li::after { content: ""; position: absolute; top: 0; width: 50%; height: 20px; border-top: 2px solid var(--line); }
+  .chart ul > li::before { right: 50%; }
+  .chart ul > li::after { left: 50%; border-left: 2px solid var(--line); }
+  .chart ul > li:first-child::before, .chart ul > li:last-child::after { border-top: none; }
+  .chart ul > li:only-child::before { display: none; }
+  .chart ul > li:only-child::after { border-top: none; }
+  .cnode {
+    width: 184px; text-align: left; border: 1px solid var(--line); border-left: 5px solid var(--green); border-radius: 12px;
+    padding: 8px 10px; background: #fff; color: var(--text); display: flex; gap: 8px; align-items: flex-start;
+    box-shadow: 0 1px 3px rgba(20, 49, 92, .1);
+  }
+  .cnode:hover { background: #f8fafd; }
+  .cnode svg { flex: 0 0 18px; margin-top: 3px; color: var(--green); }
+  .cnode .b { min-width: 0; flex: 1; }
+  .cnode .nm { display: block; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cnode .meta { display: block; font-size: 12px; color: var(--muted); }
+  .cnode .st { display: block; font-size: 12px; font-weight: 700; margin-top: 2px; }
+  .cnode.me { background: var(--navy-soft); border-left-color: var(--navy); }
+  .cnode.me svg { color: var(--navy); }
+  .cnode.off { background: #f1f3f6; border-left-color: #aab2bf; }
+  .cnode.off .nm, .cnode.off svg { color: var(--muted); }
+  .cnode.sel { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+  .ctog { margin-top: 4px; border-color: var(--line); color: var(--muted); font-size: 12px; padding: 0 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .seg button { border: none; border-radius: 0; color: var(--muted); padding: 2px 12px; font-size: 12px; }
+  .seg button.on { background: var(--navy); color: #fff; }
+  .treebar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+
+  dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 12px; }
+  dl.kv dt { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  dl.kv dd { margin: 0; font-weight: 600; }
+  .bar { height: 8px; background: #e3e9f2; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
+  .bar i { display: block; height: 100%; background: var(--green); }
+  .muted { color: var(--muted); font-weight: 400; }
+  .note { background: var(--green-soft); border-radius: 10px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+  h3 { font-size: 14px; color: var(--navy); margin: 14px 0 4px; }
+  table.hist { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 6px; }
+  table.hist th { color: var(--muted); font-weight: 400; font-size: 12px; text-align: left; padding: 4px; border-bottom: 1px solid var(--line); }
+  table.hist td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.hist .d { width: 1%; white-space: nowrap; color: var(--muted); }
+  table.hist .n { width: 1%; text-align: right; white-space: nowrap; }
+  table.hist .p { color: var(--orange); font-weight: 700; }
+  table.hist small { display: block; color: var(--muted); font-weight: 400; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 1px solid #e3e9f2; padding: 7px 8px; text-align: right; font-variant-numeric: tabular-nums; }
+  th { color: var(--muted); font-size: 12px; font-weight: 600; }
+  td.l, th.l { text-align: left; }
+  tr.pick { cursor: pointer; }
+  tr.pick:hover td { background: #f8fafd; }
+  tr.on td { background: var(--green-soft); }
+  footer { max-width: 1100px; margin: 0 auto; padding: 4px 16px 30px; color: var(--muted); font-size: 12px; text-align: center; }
+
+  /* ログイン */
+  .login { max-width: 420px; margin: 40px auto; }
+  .login label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  .login .act { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .login .err { color: var(--red); margin-top: 10px; min-height: 1.6em; }
+
+  /* 下のタブ（PCでは上に横ならび） */
+  .nav { display: flex; gap: 4px; background: #fff; border-radius: 14px; padding: 4px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(20, 49, 92, .12); }
+  .nav button { flex: 1; border: none; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 4px; color: var(--muted); font-weight: 700; }
+  .nav button svg { flex: 0 0 20px; }
+  .nav button.on { background: var(--navy-soft); color: var(--navy); }
+  .nav .n { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--orange-soft); color: var(--orange); font-size: 11px; line-height: 18px; }
+
+  /* ホーム：レベルのカード（小さめ） */
+  .lvcard { padding: 12px 14px; margin-bottom: 12px; }
+  .lvcard .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .lvcard .ttl { font-size: 16px; font-weight: 700; color: var(--navy); }
+  .lvcard .ttl .to { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .lvcard .big { font-size: 22px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
+  .lvcard .big small { font-size: 13px; font-weight: 700; margin-left: 2px; }
+  .lvbar { height: 8px; background: #e3e9f2; border-radius: 999px; overflow: hidden; margin: 8px 0 4px; }
+  .lvbar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #8db8e3, var(--navy)); }
+  .lvneed { font-size: 13px; }
+  .lvneed b { color: var(--navy); font-size: 15px; }
+  .lvsub { font-size: 12px; color: var(--muted); }
+  .lvsub b { color: var(--orange); font-size: 12px; }
+  .ladder { display: flex; gap: 3px; margin: 8px 0 4px; }
+  .ladder span { flex: 1; text-align: center; font-size: 11px; padding: 1px 0; border-radius: 6px; background: #eef2f7; color: var(--muted); }
+  .ladder span.done { background: var(--navy-soft); color: var(--navy); }
+  .ladder span.now { background: var(--navy); color: #fff; font-weight: 700; }
+  .lvfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .asof { font-size: 11px; color: var(--muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid #e3e9f2; }
+  .linkbtn { border: none; padding: 0; background: none; color: var(--navy); font-weight: 700; text-decoration: underline; font-size: 12px; }
+  .linkbtn:hover { background: none; }
+  .rwcard { padding: 20px; margin-bottom: 12px; }
+  .calc { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .calch { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .calch b { color: var(--navy); font-size: 18px; font-variant-numeric: tabular-nums; }
+  .calc dl.kv { margin-bottom: 8px; }
+  .calcf { border-top: 1px dashed var(--line); padding-top: 8px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .rwcard .big { font-size: 36px; font-weight: 800; color: var(--navy); line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .rwcard .yen { font-size: 15px; color: var(--muted); font-weight: 600; }
+  .rwsplit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+  .rwsplit div { background: #f3f6fa; border-radius: 10px; padding: 8px 10px; }
+  .rwsplit .lbl { font-size: 12px; color: var(--muted); }
+  .rwsplit b { display: block; font-size: 16px; color: var(--navy); }
+  .alert { border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
+  .alert.ng { background: var(--red-soft); color: var(--red); }
+  .alert.hold { background: var(--orange-soft); color: var(--orange); }
+  .alert b { display: block; margin-bottom: 2px; }
+  .badge.role { background: #eef2f7; color: var(--navy); }
+  .badge.new { background: var(--green-soft); color: var(--green); }
+  .sec { margin: 4px 2px 8px; font-size: 16px; font-weight: 700; color: var(--navy); }
+
+  /* トップへ戻る（下にスクロールしたときだけ出る） */
+  .totop { position: fixed; right: 18px; bottom: 22px; z-index: 30; border: none; border-radius: 999px; background: var(--navy); color: #fff;
+    padding: 10px 16px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 12px rgba(20, 49, 92, .3); display: flex; align-items: center; gap: 6px;
+    opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .2s, transform .2s; }
+  .totop.show { opacity: 1; pointer-events: auto; transform: none; }
+  @media (max-width: 760px) {
+    .totop { bottom: calc(78px + env(safe-area-inset-bottom)); right: calc(100vw - var(--vw, 100vw) + 12px); }
+    .nav { position: fixed; left: 0; right: auto; width: var(--vw, 100%); bottom: 0; z-index: 20; margin: 0; border-radius: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+      box-shadow: 0 -1px 4px rgba(20, 49, 92, .15); }
+    .nav button { flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 2px; flex: 1 1 0; min-width: 0; }
+    body { padding-bottom: 80px; }
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row; }
+    .cols { grid-template-columns: minmax(0, 1fr); }
+    .tree ul { margin-left: 8px; padding-left: 8px; }
+    #detail { position: static; }
+    .tile .val { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="in">
+    <div>
+      <h1>組織管理</h1>
+      <p>自分と、自分より下の代理店・契約を確認できます</p>
+    </div>
+    <div class="side" id="side"></div>
+  </div>
+</header>
+<main id="app"><p class="empty">読み込み中…</p></main>
+<button class="totop" id="totop" aria-label="トップへ戻る"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>トップへ</button>
+<footer>ポイントとレベルは登録済みの内容です。「次のレベルまで」は目安です。</footer>
+
+<script>
+/*
+ * スマホの画面幅に合わせる：Googleの埋め込みの枠（上の注意書きの帯つき）がスマホの画面より広く作られることがあり、
+ * そのままだと右側が切れる。指で操作する端末で、枠の幅が画面の幅より広いときだけ、中身を画面の幅（--vw）までにする。
+ */
+(function () {
+  var root = document.documentElement;
+  function fit() {
+    var touch = window.matchMedia('(pointer: coarse)').matches;
+    var portrait = window.matchMedia('(orientation: portrait)').matches;
+    var sw = screen.width, sh = screen.height;
+    var dev = portrait ? Math.min(sw, sh) : Math.max(sw, sh); // iPhone の screen.width は向きを変えても縦の幅のまま
+    if (touch && dev && window.innerWidth > dev + 2) root.style.setProperty('--vw', dev + 'px');
+    else root.style.removeProperty('--vw');
+  }
+  fit();
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
+})();
+/* ================= 設定 ================= */
+// レベルが上がる基準（累積ポイント／直紹介ポイント）。Code.gs と同じ値
+var LEVELS = [
+  { lv: 2, pt: 6, direct: 0 }, { lv: 3, pt: 16, direct: 0 }, { lv: 4, pt: 31, direct: 10 },
+  { lv: 5, pt: 61, direct: 12 }, { lv: 6, pt: 101, direct: 15 }, { lv: 7, pt: 201, direct: 20 }
+];
+var TOKEN_KEY = 'mk2_org_token';
+var COMPANY_CODE = 'ABCD-1'; // 個人名を出さず「会社」と表示するコード（Code.gs の ORG_COMPANY と同じ）
+var IN_GAS = typeof google !== 'undefined' && google.script && google.script.run;
+// Googleの外（GitHub Pages など）に置いたときは、この Apps Script の doPost を呼ぶ。パソコンでファイルを直接開いたとき・?sample のときは見本データ
+var API_URL = 'https://script.google.com/macros/s/AKfycbz1QJVbgMPtInBV0O59BjO7FQ4YQdrB3BC_oiio4O4AjxMYX7RrGlm3FUJteGE_yB1a/exec';
+var USE_API = !IN_GAS && location.protocol !== 'file:' && !/[?&]sample\b/.test(location.search);
+var LIVE = IN_GAS || USE_API;
+
+/* ================= 見本データ（GAS の外で開いたときだけ使う） ================= */
+var SAMPLE = {
+  me: 'Z-001', asOf: '2026/10/03 09:00', codes: ['Z-001'], postedUntil: '2026/09/21',
+  agents: [
+    { code: 'Z-001', name: '山田 太郎', parent: '', level: '4', pt: 38.5, direct: 11, subsc: true },
+    { code: 'Z-002', name: '佐藤 花子', parent: 'Z-001', level: '3', pt: 18, direct: 6, subsc: true },
+    { code: 'Z-003', name: '鈴木 一郎', parent: 'Z-001', level: '2', pt: 7.5, direct: 3, subsc: true },
+    { code: 'Z-004', name: '株式会社サンプル', parent: 'Z-001', level: '1', pt: 0, direct: 0, subsc: false },
+    { code: 'Z-005', name: '高橋 美咲', parent: 'Z-002', level: '2', pt: 9, direct: 4.5, subsc: true },
+    { code: 'Z-006', name: '田中 健', parent: 'Z-002', level: '1', pt: 2.5, direct: 2.5, subsc: true },
+    { code: 'Z-007', name: '伊藤 さくら', parent: 'Z-002', level: '1', pt: 0, direct: 0, subsc: true },
+    { code: 'Z-008', name: '渡辺 大輔', parent: 'Z-003', level: '1', pt: 3, direct: 3, subsc: true },
+    { code: 'Z-009', name: '中村 由美', parent: 'Z-003', level: '1', pt: 1.5, direct: 1.5, subsc: false },
+    { code: 'Z-010', name: '小林 翔', parent: 'Z-005', level: '1', pt: 4.5, direct: 2, subsc: true },
+    { code: 'Z-011', name: '加藤 愛', parent: 'Z-005', level: '1', pt: 0, direct: 0, subsc: true },
+    { code: 'Z-012', name: '吉田 誠', parent: 'Z-010', level: '1', pt: 2.5, direct: 2.5, subsc: true },
+    { code: 'Z-013', name: '山本 奈々', parent: 'Z-008', level: '1', pt: 0, direct: 0, subsc: true }
+  ],
+  contracts: [
+    { name: '見本 一子', intro: 'Z-001', adv: 'Z-001', amount: 300, years: 25, pay: '月払い', req: '2026/06/12', act: '2026/06/20', month: '2026年6月', point: 1.5,
+      st: { doc: true, fee: true, zoomDate: '2026/06/14', zoomSt: '完了', mail: true, telDate: '2026/06/16', telSt: '完了', bs: '受理', stop: '' } },
+    { name: '見本 二郎', intro: 'Z-001', adv: 'Z-001', amount: 500, years: 20, pay: '年払い', req: '2026/07/03', act: '2026/07/15', month: '2026年7月', point: 2 },
+    { name: '見本 三奈', intro: 'Z-002', adv: 'Z-001', amount: 200, years: 25, pay: '月払い', req: '2026/07/21', act: '2026/08/02', month: '2026年7月', point: 1 },
+    { name: '見本 四朗', intro: 'Z-005', adv: 'Z-001', amount: 500, years: 25, pay: '月払い', req: '2026/08/09', act: '2026/08/18', month: '2026年8月', point: 2.5 },
+    { name: '見本 五月', intro: 'Z-006', adv: 'Z-002', amount: 500, years: 25, pay: '半年払い', req: '2026/08/25', act: '2026/09/10', month: '2026年8月', point: 2.5 },
+    { name: '見本 六花', intro: 'Z-008', adv: 'Z-001', amount: 300, years: 20, pay: '月払い', req: '2026/09/02', act: '2026/09/12', month: '2026年9月', point: 1.2 },
+    { name: '見本 七海', intro: 'Z-010', adv: 'Z-002', amount: 400, years: 25, pay: '月払い', req: '2026/09/15', act: '2026/09/28', month: '2026年9月', point: 2 },
+    { name: '見本 八重', intro: 'Z-012', adv: 'Z-002', amount: 500, years: 25, pay: '月払い', req: '2026/09/22', act: '2026/10/01', month: '2026年9月', point: 2.5 },
+    { name: '見本 九太', intro: 'Z-009', adv: 'Z-001', amount: 300, years: 25, pay: '月払い', req: '2026/09/27', app: '2026/09/30', act: '', month: '', point: 1.5,
+      st: { doc: true, fee: true, zoomDate: '2026/10/02', zoomSt: '完了', mail: false, telDate: '2026/10/06', telSt: '予約済', bs: '', stop: '' } },
+    { name: '見本 十和', intro: 'Z-003', adv: 'Z-001', amount: 200, years: 15, pay: '月払い', req: '2026/10/01', act: '', month: '', point: 0.6,
+      st: { doc: true, fee: false, zoomDate: '', zoomSt: '', mail: false, telDate: '', telSt: '', bs: '', stop: '' } }
+  ],
+  usdJpy: 150,
+  // 見込み報酬（自分の分だけ）：まだ支払っていない実績月ごとに [契約者, 種類, ドル, 何年目, 新規/継続, 決済済みか]
+  rewards: {
+    'Z-001': { subsc: true, startup: true, potential: 0, months: [
+      { label: '2026年8月分', pay: '2026年10月末', items: [
+        ['見本 四朗', '差額', 25, 1, '新規', true, null, { pay: 500, amt: 500, every: 1, years: 25, pct: 5, lv: '4', rate: 15, low: 'Z-005', lowLv: '2', lowRate: 10 }],
+        ['見本 五月', 'アドバイザー', 25, 1, '新規', true, null, { pay: 500, amt: 500, every: 1, years: 25, pct: 5, adv: 5 }],
+        ['見本 一子', '紹介', 9.6, 1, '継続', true, null, { pay: 300, amt: 300, every: 1, years: 25, pct: 3.2, lv: '4', rate: 3.2, adv: 0, intro: 'Z-001', recv: 'Z-001' }],
+        ['見本 三奈', '差額', 1.2, 1, '継続', true, null, { pay: 200, amt: 200, every: 1, years: 25, pct: 0.6, lv: '4', rate: 2.2, low: 'Z-002', lowLv: '3', lowRate: 1.6 }]
+      ] },
+      { label: '2026年9月分', pay: '2026年11月末', items: [
+        ['見本 六花', '差額', 15, 1, '新規', true], ['見本 七海', '差額', 10, 1, '新規', true], ['見本 八重', '差額', 12.5, 1, '新規', true],
+        ['見本 九太', '差額', 15, 1, '新規', false], ['見本 一子', '紹介', 9.6, 1, '継続', true], ['見本 四朗', '差額', 3.2, 1, '継続', true]
+      ] }
+    ] }
+  },
+  // ポイント履歴：[日付, 内容, ポイント, 直紹介ポイント, 累積]（古い順）
+  history: {
+    'Z-001': [
+      ['2025/07/25', 'それまでの累計', 8, 0, 8],
+      ['2025/11/26', '契約のポイント（2025年11月の明細）', 5, 0, 13],
+      ['2026/01/15', 'スタートアップ研修（参加日 2026/01/10）', 1, 0, 14],
+      ['2026/02/25', '直紹介ポイント（2026年1月まで）', 0, 2.5, 14],
+      ['2026/04/27', '契約のポイント（2026年4月の明細）', 12.5, 4, 26.5],
+      ['2026/06/19', '契約のポイント（2026年6月の明細）', 6, 3, 32.5],
+      ['2026/08/18', '契約のポイント（2026年8月の明細）', 2.5, 0, 35],
+      ['2026/09/21', '契約のポイント（2026/09/21 計上分）', 3.5, 1.5, 38.5]
+    ],
+    'Z-002': [
+      ['2026/02/25', '契約のポイント（2026年2月の明細）', 15, 5, 15],
+      ['2026/09/21', '契約のポイント（2026/09/21 計上分）', 3, 1, 18]
+    ]
+  }
+};
+
+/* ================= 状態 ================= */
+var D = null;        // サーバーから受け取ったデータ
+var byCode = {};     // コード → 代理店
+var kids = {};       // コード → 直下のコード
+var S = { page: 'home', focus: '', tab: 'tree', q: '', sel: null, open: {}, month: '' };
+
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function pt(n) { return (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace(/\.?0+$/, '') || '0'; }
+function usd(n) { return '$' + (Number(n) || 0).toLocaleString('en-US'); }
+
+/* ================= 読み込み・ログイン ================= */
+function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+function setToken(t) { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
+function call(name, args, ok, ng) {
+  if (USE_API) { // Content-Type を付けない（text/plain）ので、ブラウザの事前確認なしで届く
+    fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: name, args: args }) })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { res && res.ok ? ok(res.result) : ng((res && res.error) || 'うまく読み込めませんでした。'); })
+      .catch(function () { ng('通信できませんでした。電波のよいところでもう一度お試しください。'); });
+    return;
+  }
+  var r = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) { ng(e && e.message ? e.message : String(e)); });
+  r[name].apply(r, args);
+}
+
+function start() {
+  if (!LIVE) { // 見本：契約に行の番号を付け、見込み報酬の契約を名前でつなぐ
+    var rowOf = {};
+    SAMPLE.contracts.forEach(function (k, i) { k.row = i + 1; rowOf[k.name] = k.row; });
+    Object.keys(SAMPLE.rewards).forEach(function (c) { SAMPLE.rewards[c].months.forEach(function (m) { m.items.forEach(function (x) { x[6] = rowOf[x[0]]; }); }); });
+    load(SAMPLE); return;
+  }
+  var t = getToken();
+  if (!t) { showLogin(); return; }
+  fetchData(t, '');
+}
+function fetchData(token, code) {
+  document.getElementById('app').innerHTML = '<p class="empty">読み込み中…</p>';
+  call('orgData', [token, code], function (res) {
+    if (res && res.ok) load(res.data);
+    else { setToken(''); showLogin(res && res.message); }
+  }, function (m) { showLogin(m); });
+}
+function showLogin(msg) {
+  document.getElementById('side').innerHTML = '';
+  document.getElementById('app').innerHTML =
+    '<div class="panel login"><h2>ログイン</h2>' +
+    '<p>マイページに登録しているメールアドレスを入力してください。確認の番号（6けた）をメールで送ります。</p>' +
+    '<div id="step1"><label>メールアドレス</label><input type="email" id="mail" autocomplete="email">' +
+    '<div class="act"><button class="main" id="send">確認の番号を送る</button></div></div>' +
+    '<div id="step2" hidden><label id="pinlbl">メールに届いた番号（6けた）</label><input type="text" id="pin" inputmode="numeric" maxlength="6" autocomplete="one-time-code">' +
+    '<div class="act"><button class="main" id="enter">ログインする</button><button class="ghost" id="back">メールアドレスを入れ直す</button></div></div>' +
+    '<div class="err" id="err">' + esc(msg || '') + '</div></div>';
+  var err = document.getElementById('err'), mail = document.getElementById('mail');
+  document.getElementById('send').onclick = function () {
+    err.textContent = '送信中…';
+    call('orgSendPin', [mail.value], function (res) {
+      err.textContent = res.message || '';
+      if (res.ok) { document.getElementById('step1').hidden = true; document.getElementById('step2').hidden = false; }
+      if (res.admin) { // 会社用：番号ではなくパスワード
+        var p = document.getElementById('pin');
+        document.getElementById('pinlbl').textContent = 'パスワード';
+        p.type = 'password'; p.removeAttribute('maxlength'); p.removeAttribute('inputmode'); p.autocomplete = 'current-password';
+      }
+    }, function (m) { err.textContent = m; });
+  };
+  document.getElementById('enter').onclick = function () {
+    err.textContent = '確認中…';
+    call('orgLogin', [mail.value, document.getElementById('pin').value], function (res) {
+      if (res.ok) { setToken(res.token); fetchData(res.token, ''); } else err.textContent = res.message || '';
+    }, function (m) { err.textContent = m; });
+  };
+  document.getElementById('back').onclick = function () { showLogin(); };
+}
+
+function load(data) {
+  D = data; byCode = {}; kids = {};
+  D.agents.forEach(function (a) { byCode[a.code] = a; kids[a.code] = []; });
+  D.agents.forEach(function (a) { if (a.parent && kids[a.parent]) kids[a.parent].push(a.code); });
+  S = { page: 'home', focus: D.me, tab: 'tree', q: '', sel: { type: 'agent', id: D.me }, open: {}, month: '',
+    view: window.matchMedia('(max-width: 760px)').matches ? 'list' : 'chart', zoom: 1, kubun: '' };
+  S.open[D.me] = true;
+  kids[D.me].forEach(function (c) { S.open[c] = true; });
+  renderSide();
+  render();
+}
+function renderSide() {
+  var h = (LIVE ? '' : '見本データで表示中　') + esc(D.asOf) + ' 時点';
+  if (D.codes && D.codes.length > 1) {
+    h += ' <select id="codesel" style="width:auto;padding:2px 8px">' + D.codes.map(function (c) {
+      return '<option' + (c === D.me ? ' selected' : '') + '>' + esc(c) + '</option>';
+    }).join('') + '</select>';
+  }
+  if (LIVE) h += '<button class="mini" id="logout">ログアウト</button>';
+  document.getElementById('side').innerHTML = h;
+  var sel = document.getElementById('codesel');
+  if (sel) sel.onchange = function () { fetchData(getToken(), sel.value); };
+  var lo = document.getElementById('logout');
+  if (lo) lo.onclick = function () { call('orgLogout', [getToken()], function () {}, function () {}); setToken(''); showLogin(); };
+}
+
+/* ================= 集計 ================= */
+function under(code) { // code から下の全員（本人を除く）
+  var out = [], st = (kids[code] || []).slice();
+  while (st.length) { var c = st.shift(); out.push(c); st = st.concat(kids[c] || []); }
+  return out;
+}
+function conIndexOfRow(row) {
+  if (row == null) return -1;
+  for (var i = 0; i < D.contracts.length; i++) if (D.contracts[i].row === row) return i;
+  return -1;
+}
+function contractsOf(codes) {
+  var set = {}; codes.forEach(function (c) { set[c] = true; });
+  return D.contracts.filter(function (k) { return set[k.intro]; });
+}
+function nextLevel(a) {
+  var lv = Number(a.level);
+  if (!(lv >= 1 && lv <= 6) || String(a.level) !== String(lv)) return null; // レベル7と特別なレベルは出さない
+  var n = LEVELS[lv - 1];
+  return { lv: n.lv, needPt: Math.max(0, n.pt - a.pt), needDirect: Math.max(0, n.direct - a.direct), rate: Math.min(1, a.pt / n.pt) };
+}
+// コード → 表示名。label は「名前（コード）」、会社は名前だけ
+function nameOf(code) { return code === COMPANY_CODE ? '会社' : (byCode[code] ? byCode[code].name : code); }
+function label(code) {
+  if (code === COMPANY_CODE || !byCode[code]) return nameOf(code);
+  return byCode[code].name + '（' + code + '）';
+}
+function hit(text) { return !S.q || String(text).toLowerCase().indexOf(S.q.toLowerCase()) !== -1; }
+function agentHit(a) { return hit(a.name) || hit(a.code); }
+
+/* ================= 画面 ================= */
+// ページ：home＝ホーム（レベル）、org＝組織（組織図・代理店一覧）、customers＝お客様（契約・月ごと）、points＝ポイント（履歴）
+var PAGES = [
+  { id: 'home', label: 'ホーム', icon: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>' },
+  { id: 'org', label: '組織', icon: '<circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5V12M5 16.5V12h14v4.5"/>' },
+  { id: 'customers', label: 'お客様', icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>' },
+  { id: 'reward', label: '報酬', icon: '<path d="M6 3l6 8 6-8M5 11h14M5 15h14M12 11v10"/>' },
+  { id: 'points', label: 'ポイント', icon: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>' }
+];
+var PAGE_TABS = { org: ['tree', 'agents'], customers: ['contracts', 'wait', 'months'] };
+
+function render() {
+  var f = byCode[S.focus], down = under(S.focus), scope = [S.focus].concat(down);
+  var cons = contractsOf(scope);
+  var h = navBar();
+  if (S.focus !== D.me) { // ほかの人から下を見ているときだけ出す
+    h += '<div class="focus"><span>表示中： <b>' + esc(label(f.code)) + '</b> から下</span>' +
+      '<button class="mini" data-act="home">' + (D.company ? '会社全体に戻す' : '自分に戻す') + '</button></div>';
+  }
+  if (S.page === 'home') h += homePage(f, down, cons);
+  else if (S.page === 'points') h += pointsPage(f);
+  else if (S.page === 'reward') h += rewardPage(f);
+  else {
+    if (D.company && S.page === 'org') h += kubunBar();
+    h += '<div class="tools"><input type="search" id="q" placeholder="' + (S.page === 'org' ? '名前・代理店コードで検索' : '契約者・紹介者で検索') + '" value="' + esc(S.q) + '"></div>';
+    h += '<div class="tabs">' + (S.page === 'org'
+      ? tab('tree', '組織図') + tab('agents', '代理店一覧')
+      : tab('contracts', '契約') + tab('wait', '手続き中', cons.filter(function (k) { return !k.act; }).length) + tab('months', '月ごと')) + '</div>';
+    h += '<div class="cols' + (isChart() ? ' wide' : '') + '"><div class="panel" id="left">' + leftPanel(scope, cons) + '</div>' +
+      '<div class="panel" id="detail">' + detailPanel() + '</div></div>';
+  }
+  document.getElementById('app').innerHTML = h;
+}
+function navBar() {
+  return '<nav class="nav">' + PAGES.map(function (p) {
+    return '<button data-page="' + p.id + '" class="' + (S.page === p.id ? 'on' : '') + '">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p.icon + '</svg>' +
+      '<span>' + p.label + '</span></button>';
+  }).join('') + '</nav>';
+}
+// ホーム：レベルのカード ＋ 紹介・実績
+function homePage(f, down, cons) {
+  var own = contractsOf([f.code]), ownWait = own.filter(function (k) { return !k.act; }).length;
+  var consWait = cons.filter(function (k) { return !k.act; }).length;
+  var h = '<div class="sec">紹介・実績</div><div class="tiles">' +
+    tile(f.code === D.me ? '直紹介のお客様' : '紹介したお客様', own.length, '件', ownWait ? '手続き中 ' + ownWait + '件' : '', 'own', ownWait ? 'ownwait' : '') +
+    tile('紹介した代理店', kids[f.code].length, '名', '組織全体 ' + down.length + '名', 'tree') +
+    tile('組織の契約', cons.length, '件', consWait ? '手続き中 ' + consWait + '件' : 'すべて手続き済み', 'contracts', consWait ? 'wait' : '') +
+    '</div>';
+  var rw = rewardOf(f.code);
+  if (rw) {
+    h += '<div class="sec">見込み報酬 <small class="lvsub">まだお支払いしていない月の目安</small></div><div class="tiles">' +
+      rw.months.map(function (mo, i) {
+        var sm = monthSum(mo);
+        return tile(esc(mo.label) + '（' + esc(mo.pay) + 'お支払い）', usd2(rw.subsc ? sm.total : 0), '',
+          !rw.subsc ? 'サブスク未払いのため発生しません' : '新規 ' + usd2(sm.new) + '・継続 ' + usd2(sm.cont) + (rw.startup ? '' : '・保留中'), 'reward' + i);
+      }).join('') + '</div>';
+  }
+  if (f.code !== COMPANY_CODE) h += '<div class="sec">レベル</div>' + levelCard(f); // 会社はレベルを出さない
+  return h;
+}
+// レベルのカード（小さめ）：次のレベルまでのポイント、Lv1〜7のどこにいるか、いつの計上分までか
+function levelCard(a) {
+  var lv = parseInt(a.level, 10) || 1, nx = lv < 7 ? LEVELS[lv - 1] : null;
+  var from = lv >= 2 ? LEVELS[lv - 2].pt : 0;
+  var h = '<div class="panel lvcard"><div class="top"><div class="ttl">Lv' + lv + (nx ? ' <span class="to">→ Lv' + nx.lv + 'まで</span>' : ' <span class="to">いちばん上のレベル</span>') + '</div>' +
+    '<div class="big">' + pt(a.pt) + '<small>' + (nx ? ' / ' + nx.pt + 'P' : 'P') + '</small></div></div>';
+  if (nx) {
+    var need = Math.max(0, nx.pt - a.pt), needD = Math.max(0, nx.direct - a.direct);
+    var rate = Math.max(0, Math.min(1, (a.pt - from) / (nx.pt - from)));
+    h += '<div class="lvbar"><i style="width:' + Math.round(rate * 100) + '%"></i></div>' +
+      '<div class="lvneed">' + (need > 0 ? 'あと <b>' + pt(need) + 'P</b> で Lv' + nx.lv : needD > 0 ? 'ポイントは Lv' + nx.lv + ' に届いています' : 'Lv' + nx.lv + ' の条件に届いています（次の計上で上がります）') +
+      (needD > 0 ? '<span class="lvsub">　直紹介もあと <b>' + pt(needD) + 'P</b>（いま ' + pt(a.direct) + ' / ' + nx.direct + 'P）</span>' : '') + '</div>';
+  }
+  h += '<div class="ladder">' + [1, 2, 3, 4, 5, 6, 7].map(function (n) {
+    return '<span class="' + (n === lv ? 'now' : n < lv ? 'done' : '') + '">Lv' + n + '</span>';
+  }).join('') + '</div>' +
+    '<div class="lvfoot"><span>累積 ' + pt(a.pt) + 'P ／ 直紹介 ' + pt(a.direct) + 'P' + (lv < 7 ? ' ／ Lv7まで あと' + (7 - lv) + 'レベル' : '') + '</span>' +
+    '<button class="linkbtn" data-page="points">ポイントの内訳</button></div>' +
+    '<div class="asof">' + postedText() + '</div></div>';
+  return h;
+}
+// ポイントがいつの計上分まで入っているか（毎月21日に計上）
+function postedText() {
+  var m = /^(\d{4})\/(\d{2})\/(\d{2})$/.exec(D.postedUntil || '');
+  if (!m) return 'ポイントは毎月21日に計上します。';
+  var y = Number(m[1]), mo = Number(m[2]), prev = mo === 1 ? 12 : mo - 1, next = mo === 12 ? 1 : mo + 1;
+  return 'ポイントは ' + y + '年' + mo + '月' + Number(m[3]) + '日の計上分（' + prev + '月分までの契約）まで入っています。次の計上は ' + next + '月21日の予定です。';
+}
+// 見込み報酬：代理店は自分の分だけ（会社用は全員）
+function rewardOf(code) { return (D.rewards || {})[code] || null; }
+function usd2(n) { return '$' + (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function yen(n) { return '¥' + Math.round((Number(n) || 0) * (D.usdJpy || 150)).toLocaleString('ja-JP'); }
+// 1か月分の合計：total＝決済済みの新規＋継続、wait＝手続き中（決済されれば）の新規
+function monthSum(mo) {
+  var s = { total: 0, new: 0, cont: 0, wait: 0, role: { '紹介': 0, '差額': 0, 'アドバイザー': 0 } };
+  mo.items.forEach(function (x) {
+    if (!x[5]) { s.wait += x[2]; return; }
+    s.total += x[2]; s.role[x[1]] += x[2];
+    if (x[4] === '新規') s.new += x[2]; else s.cont += x[2];
+  });
+  return s;
+}
+function rewardPage(f) {
+  var rw = rewardOf(f.code), mine = f.code === D.me;
+  if (!rw) {
+    return '<div class="panel"><h2>報酬</h2><p class="empty">' + (f.code === COMPANY_CODE ? '会社の分は出していません。' : '報酬は、ご自身の分だけ表示します。') + '</p>' +
+      (rewardOf(D.me) ? '<button data-act="home">自分の報酬を見る</button>' : '') + '</div>';
+  }
+  var h = '';
+  if (!rw.subsc) {
+    h += '<div class="alert ng"><b>サブスクが未払いのため、報酬は発生しません</b>' +
+      '紹介した契約の報酬は、上の代理店に移ります。' + (rw.potential ? 'お支払いいただいていれば、下の月の分で 約' + usd2(rw.potential) + '（' + yen(rw.potential) + '）の見込みでした。' : '') + '</div>';
+  }
+  if (rw.subsc && !rw.startup) {
+    h += '<div class="alert hold"><b>スタートアップに参加していないため、報酬は保留になります</b>' +
+      '参加した月に、それまでの分をまとめてお支払いします。</div>';
+  }
+  var mi = Math.min(S.rwMonth || 0, rw.months.length - 1), mo = rw.months[mi], sm = monthSum(mo);
+  h += '<div class="seg" style="margin-bottom:10px">' + rw.months.map(function (m, i) {
+    return '<button data-rwmonth="' + i + '" class="' + (i === mi ? 'on' : '') + '">' + esc(m.label) + '</button>';
+  }).join('') + '</div>';
+  h += '<div class="panel rwcard"><div class="lvsub">' + (mine ? '' : esc(f.name) + 'さんの') + esc(mo.label) + 'の見込み報酬（' + esc(mo.pay) + 'お支払い予定）</div>' +
+    '<div class="big">' + usd2(rw.subsc ? sm.total : 0) + '</div><div class="yen">約' + yen(rw.subsc ? sm.total : 0) + '</div>' +
+    '<div class="rwsplit"><div><span class="lbl">新規</span><b>' + usd2(sm.new) + '</b></div>' +
+    '<div><span class="lbl">継続</span><b>' + usd2(sm.cont) + '</b></div>' +
+    '<div><span class="lbl">うちアドバイザー</span><b>' + usd2(sm.role['アドバイザー']) + '</b></div></div>' +
+    (sm.wait ? '<div class="lvneed" style="font-size:14px;margin-top:12px">手続き中の契約が決済されれば <b style="font-size:20px">+' + usd2(sm.wait) + '</b>（約' + yen(sm.wait) + '）</div>' : '') +
+    '<div class="asof">新規＝その月が初めての入金の契約、継続＝2回目からの入金です。毎月払いは毎月、四半期・半年毎・年一回の契約は入金がある月だけ入ります。' +
+    'お客様が予定どおり入金した場合の目安で、実際の金額はコミッション明細でご確認ください。1ドル＝' + (D.usdJpy || 150) + '円で計算しています。</div></div>';
+  var items = mo.items.slice().sort(function (a, b) { return (b[5] - a[5]) || (a[4] === b[4] ? b[2] - a[2] : a[4] === '新規' ? -1 : 1); });
+  h += '<div class="panel"><h2>契約ごとの見込み <small>' + items.length + '件</small></h2>';
+  if (!items.length) return h + '<p class="empty">この月の見込みはありません。</p></div>';
+  h += '<div class="list">' + items.map(function (x) {
+    var ci = conIndexOfRow(x[6]), sel = ci >= 0 && S.sel && S.sel.type === 'contract' && S.sel.id === ci;
+    var tag = ci >= 0 ? 'button' : 'div'; // 見られる契約だけ押せる（押すと契約の詳細）
+    return '<' + tag + ' class="row' + (sel ? ' sel' : '') + '"' + (ci >= 0 ? ' data-contract="' + ci + '"' : '') + '>' +
+      '<span class="left"><span class="nm">' + esc(x[0]) + '</span><span class="meta">' + esc(x[1]) + ' ・ ' + x[3] + '年目</span></span>' +
+      '<span class="right">' + (x[4] === '新規' ? '<span class="badge new">新規</span>' : '<span class="badge role">継続</span>') +
+      (x[5] ? '' : ' <span class="badge wait">決済されれば</span>') +
+      '<br><b style="color:var(--navy);font-size:14px">' + usd2(x[2]) + '</b></span></' + tag + '>';
+  }).join('') + '</div></div>';
+  // 押した契約の詳細（報酬のページでは下に出す）と、その契約のこの月の報酬の計算
+  if (S.sel && S.sel.type === 'contract' && D.contracts[S.sel.id]) {
+    var mineItems = items.filter(function (x) { return conIndexOfRow(x[6]) === S.sel.id; });
+    h += '<div class="cols" style="margin-top:12px"><div class="panel" id="detail">' + contractDetail(D.contracts[S.sel.id]) + '</div>' +
+      '<div class="panel">' + rewardBasis(mineItems, f, mo) + '</div></div>';
+  }
+  return h;
+}
+// この報酬の計算：入金額 × 率。差額は「受け取る人の率 − 下の代理店の率」
+function rewardBasis(items, f, mo) {
+  var h = '<h2>この報酬の計算 <small>' + esc(mo.label) + '</small></h2>';
+  if (!items.length || !items[0][7]) return h + '<p class="empty">この月の計算はありません。</p>';
+  var who = f.code === D.me ? 'あなた' : esc(nameOf(f.code)) + 'さん';
+  var pc = function (v) { return (Math.round((Number(v) || 0) * 100) / 100) + '%'; };
+  var lvOf = function (code, lv) { return code === COMPANY_CODE || !lv ? '' : 'Lv' + esc(lv) + '・'; };
+  var b0 = items[0][7], cont = items[0][4] !== '新規';
+  h += '<p class="lvsub" style="margin:-4px 0 10px">入金額 <b>' + usd2(b0.pay) + '</b>（月額 ' + usd(b0.amt) + ' × ' + b0.every + 'か月分）・' + b0.years + '年・' + items[0][3] + '年目・' + esc(items[0][4]) + '</p>';
+  items.forEach(function (x) {
+    var b = x[7], term = b.years + '年・' + x[3] + '年目', rows = '';
+    if (x[1] === '紹介') {
+      rows += '<dt>紹介料の率</dt><dd>' + pc(b.rate) + ' <small class="muted">（' + lvOf(f.code, b.lv) + term + '）</small></dd>';
+      if (b.adv) rows += '<dt>アドバイザー分</dt><dd>−' + pc(b.adv) + ' <small class="muted">（アドバイザーに入ります）</small></dd>';
+      if (b.intro && b.recv && b.intro !== b.recv) rows += '<dt>紹介者</dt><dd>' + esc(label(b.intro)) + ' <small class="muted">（サブスク未払いのため、この分が移っています）</small></dd>';
+    } else if (x[1] === '差額') {
+      rows += '<dt>' + who + 'の率</dt><dd>' + pc(b.rate) + ' <small class="muted">（' + lvOf(f.code, b.lv) + term + '）</small></dd>' +
+        '<dt>下の代理店の率</dt><dd>' + pc(b.lowRate) + ' <small class="muted">（' + esc(label(b.low)) + '・' + lvOf(b.low, b.lowLv) + term + '）</small></dd>' +
+        '<dt>差額の率</dt><dd>' + pc(b.rate) + ' − ' + pc(b.lowRate) + ' ＝ ' + pc(b.pct) + '</dd>';
+    } else {
+      rows += '<dt>アドバイザーの率</dt><dd>' + pc(b.adv) + ' <small class="muted">（' + term + '）</small></dd>';
+    }
+    h += '<div class="calc"><div class="calch"><span class="badge role">' + esc(x[1]) + '</span><b>' + usd2(x[2]) + '</b></div>' +
+      '<dl class="kv">' + rows + '</dl>' +
+      '<div class="calcf">' + usd2(b.pay) + ' × ' + pc(b.pct) + ' ＝ <b>' + usd2(x[2]) + '</b>' + (x[5] ? '' : ' <span class="badge wait">決済されれば</span>') + '</div></div>';
+  });
+  if (cont) h += '<p class="lvsub">継続は、契約したときのレベル・組織で計算しています。</p>';
+  return h + '<p class="lvsub">お客様が予定どおり入金した場合の目安です。実際の金額はコミッション明細でご確認ください。</p>';
+}
+// ポイント：合計と、すべての履歴
+function pointsPage(f) {
+  var h = '<div class="panel" style="margin-bottom:12px"><h2>ポイント' + (f.code === D.me ? '' : ' <small>' + esc(f.name) + 'さん</small>') + '</h2>' +
+    '<div class="tiles" style="margin-bottom:6px">' + tile('累積ポイント', pt(f.pt), 'P', '') + tile('直紹介ポイント', pt(f.direct), 'P', '') + '</div>' +
+    '<div class="lvsub">' + postedText() + '</div></div>';
+  return h + '<div class="panel">' + historyTable(f.code, 0) + '</div>';
+}
+
+// 代理店区分（会社用だけ）：コードの英字。押すと、その区分の一番上の人から下を表示する
+function kubunOf(code) { var m = /^([A-Z]+)-/.exec(code); return m ? m[1] : ''; }
+function kubunTops(k) { // その区分で、紹介者が同じ区分にいない人（下の人数が多い順）
+  return D.agents.filter(function (a) {
+    return a.code !== D.me && kubunOf(a.code) === k && !(byCode[a.parent] && a.parent !== D.me && kubunOf(a.parent) === k);
+  }).map(function (a) { return a.code; }).sort(function (x, y) { return under(y).length - under(x).length; });
+}
+function kubunBar() {
+  var seen = {}, list = [];
+  D.agents.forEach(function (a) { var k = kubunOf(a.code); if (a.code !== D.me && k && !seen[k]) { seen[k] = true; list.push(k); } });
+  list.sort();
+  var h = '<div class="kubun"><button data-kubun="" class="' + (S.kubun ? '' : 'on') + '">全体</button>' + list.map(function (k) {
+    return '<button data-kubun="' + esc(k) + '" class="' + (S.kubun === k ? 'on' : '') + '">' + esc(k) + '</button>';
+  }).join('') + '</div>';
+  var tops = S.kubun ? kubunTops(S.kubun) : [];
+  if (tops.length > 1) { // 一番上の人が何人もいる区分は、ここで切り替える
+    h += '<div class="kubun">' + esc(S.kubun) + ' の一番上：' + tops.map(function (c) {
+      return '<button class="mini' + (c === S.focus ? ' on' : '') + '" data-focus="' + esc(c) + '">' + esc(byCode[c].name) + '</button>';
+    }).join('') + '</div>';
+  }
+  return h;
+}
+// go：押したときに開く場所（tree＝組織図、contracts＝契約、wait＝手続き中、own／ownwait＝本人が紹介した契約・その手続き中、reward＝報酬）。subGo は下の小さい文字だけの行き先
+function tile(lbl, val, unit, sub, go, subGo) {
+  return '<div class="tile"' + (go ? ' data-go="' + go + '"' : '') + '><div class="lbl">' + lbl + '</div><div class="val">' + val + '<small>' + unit + '</small></div>' +
+    '<div class="sub"' + (subGo ? ' data-go="' + subGo + '"' : '') + '>' + esc(sub) + '</div></div>';
+}
+function tab(id, label, n) {
+  return '<button data-tab="' + id + '" class="' + (S.tab === id ? 'on' : '') + '">' + label + (n ? '<span class="n">' + n + '</span>' : '') + '</button>';
+}
+function leftPanel(scope, cons) {
+  if (S.tab === 'agents') return agentsPanel(scope);
+  if (S.tab === 'contracts') return contractsPanel(cons, true);
+  if (S.tab === 'wait') return contractsPanel(cons, false);
+  if (S.tab === 'months') return monthsPanel(cons);
+  return treePanel(scope);
+}
+
+function agentRow(a, extra) {
+  var sel = S.sel && S.sel.type === 'agent' && S.sel.id === a.code;
+  var n = under(a.code).length;
+  return '<button class="row' + (sel ? ' sel' : '') + (a.code === D.me ? ' me' : '') + '" data-agent="' + esc(a.code) + '">' +
+    '<span class="left"><span class="nm">' + esc(a.name) + '</span><span class="meta">' + esc(a.code) + (extra ? ' ・ ' + esc(extra) : '') + '</span></span>' +
+    '<span class="right">' + (a.code === COMPANY_CODE ? '' : '<span class="badge lv">Lv' + esc(a.level) + '</span> ') +
+    (a.subsc ? '' : '<span class="badge ng">サブスク未払い</span> ') + '<br>' + pt(a.pt) + 'P' + (n ? ' ・ 下に' + n + '名' : '') + '</span></button>';
+}
+function treePanel(scope) {
+  var h = '<h2>組織図 <small>名前を押すと詳しく出ます</small></h2>';
+  if (S.q) {
+    var found = scope.map(function (c) { return byCode[c]; }).filter(agentHit);
+    h += '<div class="list">' + (found.length ? found.map(function (a) { return agentRow(a, parentName(a)); }).join('') : '<p class="empty">見つかりませんでした。</p>') + '</div>';
+    return h;
+  }
+  h += '<div class="treebar"><span class="seg"><button data-view="chart" class="' + (S.view === 'chart' ? 'on' : '') + '">図で見る</button>' +
+    '<button data-view="list" class="' + (S.view === 'list' ? 'on' : '') + '">一覧で見る</button></span>' +
+    '<button class="mini ghost" data-act="openall">すべて開く</button><button class="mini ghost" data-act="closeall">たたむ</button>';
+  if (S.view !== 'chart') return h + '</div><ul class="tree">' + treeNode(S.focus) + '</ul>';
+  h += '<button class="mini ghost" data-zoom="-1">−</button><span class="meta">' + Math.round(S.zoom * 100) + '%</span><button class="mini ghost" data-zoom="1">＋</button></div>';
+  return h + '<div class="chartwrap"><ul class="chart" style="zoom:' + S.zoom + '">' + chartNode(S.focus) + '</ul></div>';
+}
+function isChart() { return S.tab === 'tree' && S.view === 'chart' && !S.q; }
+var ICON_AGENT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></svg>';
+// 図：代理店だけをならべる（契約は箱にしない。件数だけ箱の中に出し、中身は詳細と契約タブで見る）
+// 一覧で見る：開閉できる階層リスト（左の ▶ / ▼ で下の人を開く）
+function treeNode(code) {
+  var a = byCode[code], ch = kids[code], open = S.open[code];
+  var h = '<li><div class="node">' +
+    (ch.length ? '<button class="tog" data-tog="' + esc(code) + '">' + (open ? '▼' : '▶') + '</button>' : '<span class="tog none"></span>') +
+    agentRow(a, ch.length ? 'すぐ下 ' + ch.length + '名' : '') + '</div>';
+  if (ch.length && open) h += '<ul>' + ch.map(treeNode).join('') + '</ul>';
+  return h + '</li>';
+}
+function chartNode(code) {
+  var a = byCode[code], ch = kids[code], own = contractsOf([code]), open = S.open[code];
+  var sel = S.sel && S.sel.type === 'agent' && S.sel.id === code;
+  var h = '<li><button class="cnode' + (code === D.me ? ' me' : '') + (a.subsc ? '' : ' off') + (sel ? ' sel' : '') + '" data-agent="' + esc(code) + '">' + ICON_AGENT +
+    '<span class="b"><span class="nm">' + esc(a.name) + '</span><span class="meta">' + esc(code) + '</span>' +
+    '<span class="st">' + (code === COMPANY_CODE ? '' : 'Lv' + esc(a.level) + ' ・ ') + pt(a.pt) + 'P</span>' +
+    (own.length ? '<span class="meta">紹介した契約 ' + own.length + '件</span>' : '') +
+    (a.subsc ? '' : '<span class="st" style="color:var(--red)">サブスク未払い</span>') + '</span></button>';
+  if (ch.length) {
+    h += '<button class="ctog" data-tog="' + esc(code) + '">' + (open ? '▼ たたむ' : '▶ 下に' + under(code).length + '名') + '</button>';
+    if (open) h += '<ul>' + ch.map(chartNode).join('') + '</ul>';
+  }
+  return h + '</li>';
+}
+function parentName(a) { return a.parent && byCode[a.parent] ? '紹介者 ' + nameOf(a.parent) : ''; }
+function agentsPanel(scope) {
+  var list = scope.map(function (c) { return byCode[c]; }).filter(agentHit)
+    .sort(function (x, y) { return y.pt - x.pt || x.code.localeCompare(y.code); });
+  return '<h2>代理店一覧 <small>' + list.length + '名・ポイントの多い順</small></h2><div class="list">' +
+    (list.length ? list.map(function (a) { return agentRow(a, parentName(a)); }).join('') : '<p class="empty">見つかりませんでした。</p>') + '</div>';
+}
+function conRow(k, i) {
+  var sel = S.sel && S.sel.type === 'contract' && S.sel.id === i;
+  var who = byCode[k.intro];
+  return '<button class="row' + (sel ? ' sel' : '') + '" data-contract="' + i + '">' +
+    '<span class="left"><span class="nm">' + esc(k.name) + '</span><span class="meta">紹介者 ' + esc(nameOf(k.intro)) + (k.act ? ' ・ 初回の決済 ' + esc(k.act) : ' ・ リクエスト日 ' + esc(k.req || '—')) + '</span></span>' +
+    '<span class="right">' + (k.act ? '<span class="badge ok">契約済み</span>' : '<span class="badge wait">' + waitState(k) + '</span>') + '<br>' +
+    usd(k.amount) + '／' + esc(k.years) + '年 ・ ' + pt(k.point) + 'P</span></button>';
+}
+// done=true：契約済み（契約タブ）、false：手続き中（手続き中タブ）
+// 手続き中の状態：本申込日がまだ＝番号待ち、本申込日あり＝決済待ち
+function waitState(k) { return k.app ? '決済待ち' : '番号待ち'; }
+function contractsPanel(cons, done) {
+  var list = cons.filter(function (k) {
+    return !!k.act === done && (!done || !S.month || monthLabel(k) === S.month) &&
+      (hit(k.name) || hit(k.intro) || hit((byCode[k.intro] || {}).name || ''));
+  });
+  if (!done) list.sort(function (a, b) { return String(b.req).localeCompare(String(a.req)); }); // リクエスト日が新しい順
+  else list.sort(function (a, b) { return String(b.act).localeCompare(String(a.act)) || String(b.req).localeCompare(String(a.req)); }); // 初回の決済が新しい順
+  var month = done && S.month;
+  var nWait = list.filter(function (k) { return !k.app; }).length;
+  return '<h2>' + (done ? '契約' : '手続き中') + ' <small>' + list.length + '件' + (month ? '（' + esc(month) + '）' : '') + '</small></h2>' +
+    (done ? '<p class="lvsub" style="margin:-4px 0 8px">初回の決済が新しい順</p>' : '<p class="lvsub" style="margin:-4px 0 8px">番号待ち（本申込の前）' + nWait + '件 ／ 決済待ち（本申込済み）' + (list.length - nWait) + '件 ・ リクエスト日が新しい順</p>') +
+    (month ? '<div style="margin-bottom:8px"><button class="mini ghost" data-act="allmonth">すべての契約に戻す</button></div>' : '') +
+    '<div class="list">' + (list.length ? list.map(function (k) { return conRow(k, D.contracts.indexOf(k)); }).join('') :
+      '<p class="empty">' + (done ? '契約はまだありません。' : '手続き中の契約はありません。') + '</p>') + '</div>';
+}
+function monthsPanel(cons) {
+  var m = {}, order = [];
+  cons.forEach(function (k) {
+    if (!k.act) return; // 手続き中は「手続き中」タブで見る
+    var key = monthLabel(k);
+    if (!m[key]) { m[key] = { n: 0, amount: 0, point: 0 }; order.push(key); }
+    m[key].n++; m[key].amount += Number(k.amount) || 0; m[key].point += Number(k.point) || 0;
+  });
+  order.sort(function (a, b) { return a === '手続き中' ? -1 : b === '手続き中' ? 1 : monthKey(b) - monthKey(a); });
+  var h = '<h2>月ごとの実績 <small>月を押すとその月の契約が出ます</small></h2>';
+  if (!order.length) return h + '<p class="empty">契約はまだありません。</p>';
+  h += '<table><tr><th class="l">実績月</th><th>契約</th><th>月額の合計</th><th>ポイント</th></tr>';
+  order.forEach(function (key) {
+    h += '<tr class="pick" data-month="' + esc(key) + '"><td class="l">' + esc(key) + '</td><td>' + m[key].n + '件</td><td>' + usd(m[key].amount) + '</td><td>' + pt(m[key].point) + 'P</td></tr>';
+  });
+  return h + '</table>';
+}
+function monthLabel(k) { return k.act ? (k.month || '月が未定') : '手続き中'; }
+function monthKey(s) { var x = String(s).match(/(\d{4})年(\d{1,2})月/); return x ? Number(x[1]) * 100 + Number(x[2]) : 0; }
+
+function detailPanel() {
+  if (!S.sel) return '<p class="empty">左から選ぶと、ここに詳しく出ます。</p>';
+  return S.sel.type === 'agent' ? agentDetail(byCode[S.sel.id]) : contractDetail(D.contracts[S.sel.id]);
+}
+function agentDetail(a) {
+  var down = under(a.code), own = contractsOf([a.code]), nx = nextLevel(a);
+  var h = '<h2>代理店の詳細</h2><dl class="kv">' +
+    '<dt>名前</dt><dd>' + esc(a.name) + '</dd><dt>代理店コード</dt><dd>' + esc(a.code) + '</dd>' +
+    (a.parent && byCode[a.parent] ? '<dt>紹介者</dt><dd>' + esc(label(a.parent)) + '</dd>' : '') +
+    (a.code === COMPANY_CODE ? '' : '<dt>レベル</dt><dd>Lv' + esc(a.level) + '</dd>') +
+    '<dt>累積ポイント</dt><dd>' + pt(a.pt) + 'P</dd><dt>直紹介ポイント</dt><dd>' + pt(a.direct) + 'P</dd>' +
+    '<dt>サブスク</dt><dd>' + (a.subsc ? '<span class="badge ok">支払い済み</span>' : '<span class="badge ng">未払い</span>') + '</dd>' +
+    '<dt>組織</dt><dd>すぐ下 ' + kids[a.code].length + '名 ／ 全体 ' + down.length + '名</dd></dl>';
+  if (nx) {
+    h += '<div class="note">Lv' + nx.lv + 'まで あと <b>' + pt(nx.needPt) + 'P</b>' +
+      (nx.needDirect > 0 ? '（うち直紹介で あと ' + pt(nx.needDirect) + 'P 必要）' : '') +
+      '<div class="bar"><i style="width:' + Math.round(nx.rate * 100) + '%"></i></div></div>';
+  }
+  if (a.code !== S.focus && down.length) h += '<button class="main" data-focus="' + esc(a.code) + '">この人から下を見る</button>';
+  h += historyBlock(a.code);
+  // 見出しの主語：会社は「会社が」、ログインした本人は「あなたが」、ほかの人は「◯◯さんが」
+  var subject = a.code === COMPANY_CODE ? '会社' : (a.code === D.me ? 'あなた' : a.name + 'さん');
+  h += '<h3>' + esc(subject) + 'が紹介した契約（' + own.length + '件）</h3>';
+  h += own.length ? '<div class="list">' + own.map(function (k) { return conRow(k, D.contracts.indexOf(k)); }).join('') + '</div>' : '<p class="empty">まだありません。</p>';
+  return h;
+}
+// ポイントの履歴（新しい順）。詳細では最初は5件で「すべて見る」、ポイントのページ（limit=0）では全部
+function historyBlock(code) { return historyTable(code, 5); }
+function historyTable(code, limit) {
+  var rows = ((D.history || {})[code] || []).slice().reverse();
+  var h = '<h3>ポイントの履歴</h3>';
+  if (!rows.length) return h + '<p class="empty">まだありません。</p>';
+  var all = !limit || S.histAll === code, show = all ? rows : rows.slice(0, limit);
+  h += '<table class="hist"><tr><th>日付</th><th>内容</th><th class="n">ポイント</th><th class="n">累積</th></tr>' +
+    show.map(function (r) {
+      return '<tr><td class="d">' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td>' +
+        '<td class="n">' + (!r[2] && r[3]
+          ? '<span class="p">直紹介 ' + (r[3] < 0 ? '' : '+') + pt(r[3]) + 'P</span>' // 直紹介ポイントだけの行
+          : '<span class="p">' + (r[2] < 0 ? '' : '+') + pt(r[2]) + 'P</span>' + (r[3] ? '<small>うち直紹介 ' + pt(r[3]) + 'P</small>' : '')) + '</td>' +
+        '<td class="n">' + pt(r[4]) + 'P</td></tr>';
+    }).join('') + '</table>';
+  if (limit && rows.length > limit) h += '<button class="ghost" data-act="hist">' + (all ? '新しい5件だけにする' : 'すべて見る（' + rows.length + '件）') + '</button>';
+  return h;
+}
+function contractDetail(k) {
+  var who = byCode[k.intro], adv = byCode[k.adv];
+  return '<h2>契約の詳細</h2><dl class="kv">' +
+    '<dt>契約者</dt><dd>' + esc(k.name) + '</dd>' +
+    '<dt>状態</dt><dd>' + (k.act ? '<span class="badge ok">契約済み</span>' : '<span class="badge wait">手続き中（' + waitState(k) + '）</span>') + '</dd>' +
+    '<dt>内容</dt><dd>' + usd(k.amount) + '／' + esc(k.years) + '年／' + esc(k.pay) + '</dd>' +
+    '<dt>リクエスト日</dt><dd>' + esc(k.req || '—') + '</dd>' +
+    '<dt>本申込日</dt><dd>' + esc(k.app || 'まだ') + '</dd>' +
+    '<dt>初回の決済</dt><dd>' + esc(k.act || 'まだ') + '</dd>' +
+    '<dt>実績月</dt><dd>' + esc(k.month || '—') + '</dd>' +
+    '<dt>ポイント</dt><dd>' + pt(k.point) + 'P</dd>' +
+    '<dt>紹介者</dt><dd>' + esc(label(k.intro)) + '</dd>' +
+    (k.adv ? '<dt>アドバイザー</dt><dd>' + esc(label(k.adv)) + '</dd>' : '') + '</dl>' +
+    stepsDetail(k.st) +
+    '<button data-act="back">戻る</button>';
+}
+// 手続きの進み具合（契約者状況管理から）
+function stepsDetail(st) {
+  var h = '<h3>手続きの進み具合</h3>';
+  if (!st) return h + '<p class="empty">まだ記録がありません。</p>';
+  var done = function (b) { return b ? '<span class="badge ok">済み</span>' : '<span class="badge wait">まだ</span>'; };
+  var state = function (v) {
+    if (!v) return '<span class="badge wait">まだ</span>';
+    var cls = /^(完了|受理)$/.test(v) ? 'ok' : /^(不備|再提出|失敗)$/.test(v) ? 'ng' : 'wait';
+    return '<span class="badge ' + cls + '">' + esc(v) + '</span>';
+  };
+  var dated = function (d, v) { return state(v) + (d ? ' <small class="muted">' + esc(d) + '</small>' : ''); };
+  return h + (st.stop ? '<p class="note">' + esc(st.stop) + 'になっています。</p>' : '') + '<dl class="kv">' +
+    '<dt>1 書類記入</dt><dd>' + done(st.doc) + '</dd>' +
+    '<dt>2 委託料（22,000円）</dt><dd>' + done(st.fee) + '</dd>' +
+    '<dt>4 Zoom</dt><dd>' + dated(st.zoomDate, st.zoomSt) + '</dd>' +
+    '<dt>5 メール承認</dt><dd>' + done(st.mail) + '</dd>' +
+    '<dt>6 保険会社の電話</dt><dd>' + dated(st.telDate, st.telSt) + '</dd>' +
+    '<dt>10 合意書（BS）</dt><dd>' + state(st.bs) + '</dd>' +
+    '</dl>';
+}
+
+/* ================= 操作 ================= */
+document.getElementById('app').addEventListener('click', function (e) {
+  var el = e.target.closest('[data-rwmonth],[data-page],[data-tab],[data-tog],[data-agent],[data-contract],[data-focus],[data-act],[data-month],[data-view],[data-zoom],[data-kubun],[data-go]');
+  if (!el || !D) return;
+  var d = el.dataset;
+  if (d.rwmonth) { S.rwMonth = Number(d.rwmonth); }
+  else if (d.page) { goPage(d.page); }
+  else if (d.tab) { S.tab = d.tab; if (d.tab !== 'contracts') S.month = ''; }
+  else if (d.tog) S.open[d.tog] = !S.open[d.tog];
+  else if (d.view) S.view = d.view;
+  else if (d.zoom) S.zoom = Math.min(1.2, Math.max(0.4, Math.round((S.zoom + Number(d.zoom) * 0.1) * 10) / 10));
+  else if (d.agent) S.sel = { type: 'agent', id: d.agent };
+  else if (d.contract) { if (!S.sel || S.sel.type !== 'contract') S.back = S.sel; S.sel = { type: 'contract', id: Number(d.contract) }; }
+  else if (d.act === 'back') { S.sel = S.back || { type: 'agent', id: S.focus }; S.back = null; } // 契約を開く前に見ていた人へ戻る
+  else if ('kubun' in d) {
+    var tops = d.kubun ? kubunTops(d.kubun) : [];
+    S.kubun = d.kubun; S.focus = tops[0] || D.me; S.open[S.focus] = true; S.q = '';
+    S.sel = { type: 'agent', id: S.focus };
+  }
+  else if (d.focus) { S.focus = d.focus; S.open[d.focus] = true; S.page = 'org'; S.tab = 'tree'; S.q = ''; }
+  else if (d.month) { S.month = d.month; S.tab = 'contracts'; }
+  else if (/^reward\d$/.test(d.go || '')) { goPage('reward'); S.rwMonth = Number(d.go.slice(6)); }
+  else if (d.go === 'own' || d.go === 'ownwait') { // 本人が紹介した契約（紹介者の代理店コードで絞る）
+    goPage('customers'); S.tab = d.go === 'own' ? 'contracts' : 'wait'; S.q = S.focus;
+  }
+  else if (d.go) {
+    goPage(d.go === 'tree' ? 'org' : 'customers');
+    S.tab = d.go; S.month = '';
+  }
+  else if (d.act === 'home') { S.kubun = ''; S.focus = D.me; S.sel = { type: 'agent', id: D.me }; }
+  else if (d.act === 'openall') [S.focus].concat(under(S.focus)).forEach(function (c) { S.open[c] = true; });
+  else if (d.act === 'closeall') { S.open = {}; S.open[S.focus] = true; }
+  else if (d.act === 'allmonth') S.month = '';
+  else if (d.act === 'hist') S.histAll = S.histAll === S.sel.id ? '' : S.sel.id;
+  var wrap = document.querySelector('.chartwrap'), sx = wrap ? wrap.scrollLeft : 0;
+  render();
+  wrap = document.querySelector('.chartwrap');
+  if (wrap) wrap.scrollLeft = sx;
+  if (d.go || d.page) window.scrollTo(0, 0);
+  var det = document.getElementById('detail');
+  if (det && (d.agent || d.contract || d.act === 'back') && (S.page === 'reward' || isChart() || window.matchMedia('(max-width: 760px)').matches)) {
+    det.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
+function goPage(p) {
+  S.page = p; S.q = ''; S.month = '';
+  if (p === 'reward' && S.sel && S.sel.type === 'contract') { S.sel = null; S.back = null; } // 報酬のページは契約を押したときだけ詳細を出す
+  if (PAGE_TABS[p] && PAGE_TABS[p].indexOf(S.tab) === -1) S.tab = PAGE_TABS[p][0];
+}
+// 検索：入力欄は作り直さず、左の一覧だけ書き直す（日本語の変換中は待つ）
+function onSearch(e) {
+  if (e.target.id !== 'q' || e.isComposing) return;
+  S.q = e.target.value.trim();
+  if (!document.getElementById('left')) return;
+  var scope = [S.focus].concat(under(S.focus)), cons = contractsOf(scope);
+  document.getElementById('left').innerHTML = leftPanel(scope, cons);
+}
+document.getElementById('app').addEventListener('input', onSearch);
+// トップへ戻る：少し下にスクロールしたら出す
+(function () {
+  var b = document.getElementById('totop');
+  var upd = function () { b.classList.toggle('show', window.scrollY > 400); };
+  window.addEventListener('scroll', upd, { passive: true });
+  b.addEventListener('click', function () {
+    var y0 = window.scrollY;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(function () { if (window.scrollY >= y0) window.scrollTo(0, 0); }, 700); // 滑らかに動かない端末では、そのまま上へ
+  });
+  upd();
+})();
+document.getElementById('app').addEventListener('compositionend', onSearch);
+
+start();
+</script>
+</body>
+</html>
