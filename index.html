@@ -281,7 +281,7 @@ var TOKEN_KEY = 'mk2_org_token';
 var COMPANY_CODE = 'ABCD-1'; // 個人名を出さず「会社」と表示するコード（Code.gs の ORG_COMPANY と同じ）
 var IN_GAS = typeof google !== 'undefined' && google.script && google.script.run;
 // Googleの外（GitHub Pages など）に置いたときは、この Apps Script の doPost を呼ぶ。パソコンでファイルを直接開いたとき・?sample のときは見本データ
-var API_URL = 'https://script.google.com/macros/s/AKfycbz1QJVbgMPtInBV0O59BjO7FQ4YQdrB3BC_oiio4O4AjxMYX7RrGlm3FUJteGE_yB1a/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbwyc_V9ne9NUuGtLDPJpf5fEPTEzb8sRDJNuzt-3QaBPgZjnj3IiAjo3Rhuxj_XxMg-/exec';
 var USE_API = !IN_GAS && location.protocol !== 'file:' && !/[?&]sample\b/.test(location.search);
 var LIVE = IN_GAS || USE_API;
 
