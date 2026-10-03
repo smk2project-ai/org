@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="組織管理">
@@ -44,11 +44,12 @@
   main { max-width: 1100px; margin: 0 auto; padding: 16px; }
   .panel { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(20, 49, 92, .12); min-width: 0; }
   /* 画面の幅より広がらないように（スマホで一度広がると、ほかのページも横にはみ出したままになるため） */
-  html { overflow-x: hidden; max-width: var(--vw, none); }
+  html { overflow-x: hidden; }
   body { max-width: 100%; overflow-x: clip; } /* clip は横スクロールの箱を作らないので、詳細の追従（sticky）が効いたまま */
   .panel h2 { margin: 0 0 10px; font-size: 16px; color: var(--navy); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .panel h2 small { font-size: 12px; color: var(--muted); font-weight: 400; }
   button, select, input { font: inherit; color: var(--text); }
+  input, select, textarea { font-size: 16px; } /* iPhone は16pxより小さい入力欄を押すと画面を拡大して、そのまま戻らないため */
   button {
     cursor: pointer; border: 1px solid var(--navy); background: #fff; color: var(--navy);
     border-radius: 999px; padding: 4px 14px;
@@ -242,8 +243,8 @@
     opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .2s, transform .2s; }
   .totop.show { opacity: 1; pointer-events: auto; transform: none; }
   @media (max-width: 760px) {
-    .totop { bottom: calc(78px + env(safe-area-inset-bottom)); right: calc(100vw - var(--vw, 100vw) + 12px); }
-    .nav { position: fixed; left: 0; right: auto; width: var(--vw, 100%); bottom: 0; z-index: 20; margin: 0; border-radius: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    .totop { bottom: calc(78px + env(safe-area-inset-bottom)); right: 12px; }
+    .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; border-radius: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
       box-shadow: 0 -1px 4px rgba(20, 49, 92, .15); }
     .nav button { flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 2px; flex: 1 1 0; min-width: 0; }
     body { padding-bottom: 80px; }
@@ -270,24 +271,6 @@
 <footer>ポイントとレベルは登録済みの内容です。「次のレベルまで」は目安です。</footer>
 
 <script>
-/*
- * スマホの画面幅に合わせる：Googleの埋め込みの枠（上の注意書きの帯つき）がスマホの画面より広く作られることがあり、
- * そのままだと右側が切れる。指で操作する端末で、枠の幅が画面の幅より広いときだけ、中身を画面の幅（--vw）までにする。
- */
-(function () {
-  var root = document.documentElement;
-  function fit() {
-    var touch = window.matchMedia('(pointer: coarse)').matches;
-    var portrait = window.matchMedia('(orientation: portrait)').matches;
-    var sw = screen.width, sh = screen.height;
-    var dev = portrait ? Math.min(sw, sh) : Math.max(sw, sh); // iPhone の screen.width は向きを変えても縦の幅のまま
-    if (touch && dev && window.innerWidth > dev + 2) root.style.setProperty('--vw', dev + 'px');
-    else root.style.removeProperty('--vw');
-  }
-  fit();
-  window.addEventListener('resize', fit);
-  window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
-})();
 /* ================= 設定 ================= */
 // レベルが上がる基準（累積ポイント／直紹介ポイント）。Code.gs と同じ値
 var LEVELS = [
