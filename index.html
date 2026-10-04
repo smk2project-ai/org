@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="組織管理">
-<meta name="theme-color" content="#14315c">
+<meta name="theme-color" content="#0b0b0b">
 <title>組織管理</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -35,7 +35,8 @@
     font-size: 14px;
     line-height: 1.6;
   }
-  header { background: var(--navy); color: #fff; padding: 18px 16px; }
+  header { background: linear-gradient(180deg, #161616, #0b0b0b); color: #efe4c4; padding: 18px 16px; border-bottom: 2px solid #b8892b; }
+  header h1 { background: linear-gradient(180deg, #fff3c4 0%, #ecc65c 48%, #b8892b 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
   header .in { max-width: 1100px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   header h1 { margin: 0; font-size: 22px; }
   header p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
@@ -218,12 +219,41 @@
   .linkbtn { border: none; padding: 0; background: none; color: var(--navy); font-weight: 700; text-decoration: underline; font-size: 12px; }
   .linkbtn:hover { background: none; }
   .rwcard { padding: 20px; margin-bottom: 12px; }
+  /* 金と黒（アイコンの色）：見込み報酬・レベル・ポイント */
+  .hero { background: radial-gradient(130% 150% at 0% 0%, #2b2410 0%, #141414 48%, #0b0b0b 100%); border: 1px solid rgba(212, 175, 55, .5);
+    border-radius: 16px; padding: 16px; color: #efe4c4; margin-bottom: 14px; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }
+  .gold { background: linear-gradient(180deg, #fff3c4 0%, #ecc65c 48%, #b8892b 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lbl { font-size: 12px; color: #cdb983; }
+  .hero .sub { font-size: 12px; color: #b9aa83; margin-top: 2px; }
+  .hero .big { font-size: 42px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .hero [data-go], .hero [data-page] { cursor: pointer; }
+  .hnext { margin-top: 10px; width: 100%; text-align: left; border: 1px solid rgba(212, 175, 55, .35); border-radius: 10px; background: rgba(255, 255, 255, .04);
+    color: #cdb983; font-size: 13px; padding: 7px 12px; }
+  .hnext:hover { background: rgba(212, 175, 55, .1); }
+  .hnext b { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .hrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 10px; margin-top: 12px; }
+  .hbox { background: rgba(255, 255, 255, .04); border: 1px solid rgba(212, 175, 55, .28); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .lvnum { font-size: 30px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .lvnum small { font-size: 14px; margin-left: 2px; }
+  .gbar { height: 6px; background: rgba(255, 255, 255, .12); border-radius: 999px; overflow: hidden; margin: 8px 0 4px; }
+  .gbar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #a87b26, #f6e08f); }
+  .glad { display: flex; gap: 2px; margin-top: 6px; }
+  .glad span { flex: 1; text-align: center; font-size: 10px; border-radius: 4px; padding: 1px 0; background: rgba(255, 255, 255, .06); color: #85795a; }
+  .glad span.done { background: rgba(212, 175, 55, .2); color: #e7c460; }
+  .glad span.now { background: linear-gradient(180deg, #f6e08f, #c4952f); color: #1b1407; font-weight: 800; }
+  .hfoot { font-size: 11px; color: #9a8d6c; margin-top: 10px; }
+  .rwcard.hero .lvsub, .rwcard.hero .asof { color: #b9aa83; border-color: rgba(212, 175, 55, .2); }
+  .rwcard.hero .yen { color: #cdb983; }
+  .rwcard.hero .rwsplit div { background: rgba(255, 255, 255, .05); border: 1px solid rgba(212, 175, 55, .22); }
+  .rwcard.hero .rwsplit .lbl { color: #b9aa83; }
+  .rwcard.hero .rwsplit b, .rwcard.hero .lvneed b { color: #ecc65c; }
+  .rwcard.hero .lvneed { color: #efe4c4; }
   .calc { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
   .calch { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .calch b { color: var(--navy); font-size: 18px; font-variant-numeric: tabular-nums; }
   .calc dl.kv { margin-bottom: 8px; }
   .calcf { border-top: 1px dashed var(--line); padding-top: 8px; font-size: 14px; font-variant-numeric: tabular-nums; }
-  .rwcard .big { font-size: 36px; font-weight: 800; color: var(--navy); line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .rwcard .big { font-size: 40px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
   .rwcard .yen { font-size: 15px; color: var(--muted); font-weight: 600; }
   .rwsplit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
   .rwsplit div { background: #f3f6fa; border-radius: 10px; padding: 8px 10px; }
@@ -480,9 +510,11 @@ function nextLevel(a) {
   return { lv: n.lv, needPt: Math.max(0, n.pt - a.pt), needDirect: Math.max(0, n.direct - a.direct), rate: Math.min(1, a.pt / n.pt) };
 }
 // コード → 表示名。label は「名前（コード）」、会社は名前だけ
-function nameOf(code) { return code === COMPANY_CODE ? '会社' : (byCode[code] ? byCode[code].name : code); }
+// 会社（ABCD-1）は「会社」と表示してレベルも出さない。ただし本人（D.companyPerson）がログインしたときは、本人として名前・レベルを出す
+function coHidden(code) { return code === COMPANY_CODE && !(D && D.companyPerson); }
+function nameOf(code) { return coHidden(code) ? '会社' : (byCode[code] ? byCode[code].name : code); }
 function label(code) {
-  if (code === COMPANY_CODE || !byCode[code]) return nameOf(code);
+  if (coHidden(code) || !byCode[code]) return nameOf(code);
   return byCode[code].name + '（' + code + '）';
 }
 function hit(text) { return !S.q || String(text).toLowerCase().indexOf(S.q.toLowerCase()) !== -1; }
@@ -532,43 +564,41 @@ function navBar() {
 function homePage(f, down, cons) {
   var own = contractsOf([f.code]), ownWait = own.filter(function (k) { return !k.act; }).length;
   var consWait = cons.filter(function (k) { return !k.act; }).length;
-  var h = '<div class="sec">紹介・実績</div><div class="tiles">' +
+  var h = goldHero(f) + '<div class="sec">紹介・実績</div><div class="tiles">' +
     tile(f.code === D.me ? '直紹介のお客様' : '紹介したお客様', own.length, '件', ownWait ? '手続き中 ' + ownWait + '件' : '', 'own', ownWait ? 'ownwait' : '') +
     tile('紹介した代理店', kids[f.code].length, '名', '組織全体 ' + down.length + '名', 'tree') +
     tile('組織の契約', cons.length, '件', consWait ? '手続き中 ' + consWait + '件' : 'すべて手続き済み', 'contracts', consWait ? 'wait' : '') +
     '</div>';
-  var rw = rewardOf(f.code);
-  if (rw) {
-    h += '<div class="sec">見込み報酬 <small class="lvsub">まだお支払いしていない月の目安</small></div><div class="tiles">' +
-      rw.months.map(function (mo, i) {
-        var sm = monthSum(mo);
-        return tile(esc(mo.label) + '（' + esc(mo.pay) + 'お支払い）', usd2(rw.subsc ? sm.total : 0), '',
-          !rw.subsc ? 'サブスク未払いのため発生しません' : '新規 ' + usd2(sm.new) + '・継続 ' + usd2(sm.cont) + (rw.startup ? '' : '・保留中'), 'reward' + i);
-      }).join('') + '</div>';
-  }
-  if (f.code !== COMPANY_CODE) h += '<div class="sec">レベル</div>' + levelCard(f); // 会社はレベルを出さない
   return h;
 }
-// レベルのカード（小さめ）：次のレベルまでのポイント、Lv1〜7のどこにいるか、いつの計上分までか
-function levelCard(a) {
-  var lv = parseInt(a.level, 10) || 1, nx = lv < 7 ? LEVELS[lv - 1] : null;
-  var from = lv >= 2 ? LEVELS[lv - 2].pt : 0;
-  var h = '<div class="panel lvcard"><div class="top"><div class="ttl">Lv' + lv + (nx ? ' <span class="to">→ Lv' + nx.lv + 'まで</span>' : ' <span class="to">いちばん上のレベル</span>') + '</div>' +
-    '<div class="big">' + pt(a.pt) + '<small>' + (nx ? ' / ' + nx.pt + 'P' : 'P') + '</small></div></div>';
-  if (nx) {
-    var need = Math.max(0, nx.pt - a.pt), needD = Math.max(0, nx.direct - a.direct);
-    var rate = Math.max(0, Math.min(1, (a.pt - from) / (nx.pt - from)));
-    h += '<div class="lvbar"><i style="width:' + Math.round(rate * 100) + '%"></i></div>' +
-      '<div class="lvneed">' + (need > 0 ? 'あと <b>' + pt(need) + 'P</b> で Lv' + nx.lv : needD > 0 ? 'ポイントは Lv' + nx.lv + ' に届いています' : 'Lv' + nx.lv + ' の条件に届いています（次の計上で上がります）') +
-      (needD > 0 ? '<span class="lvsub">　直紹介もあと <b>' + pt(needD) + 'P</b>（いま ' + pt(a.direct) + ' / ' + nx.direct + 'P）</span>' : '') + '</div>';
+// 金のカード：見込み報酬（いちばん大きく）・レベル・ポイント。押すと報酬／ポイントのページへ
+function goldHero(f) {
+  var rw = rewardOf(f.code), showLv = !coHidden(f.code);
+  if (!rw && !showLv) return '';
+  var h = '<div class="hero">';
+  if (rw) {
+    var mo = rw.months[0], sm = monthSum(mo), total = rw.subsc ? sm.total : 0;
+    h += '<div class="hrw" data-go="reward0"><div class="lbl">見込み報酬　' + esc(mo.label) + '（' + esc(mo.pay) + 'お支払い）</div>' +
+      '<div class="big gold">' + usd2(total) + '</div><div class="sub">約' + yen(total) +
+      (!rw.subsc ? '　サブスク未払いのため発生しません' : '　新規 ' + usd2(sm.new) + '・継続 ' + usd2(sm.cont) + (rw.startup ? '' : '・保留中')) + '</div>';
+    if (rw.months[1]) {
+      var sm2 = monthSum(rw.months[1]);
+      h += '<button class="hnext" data-go="reward1">次の月　' + esc(rw.months[1].label) + '　<b class="gold">' + usd2(rw.subsc ? sm2.total : 0) + '</b>　›</button>';
+    }
+    h += '</div>';
   }
-  h += '<div class="ladder">' + [1, 2, 3, 4, 5, 6, 7].map(function (n) {
-    return '<span class="' + (n === lv ? 'now' : n < lv ? 'done' : '') + '">Lv' + n + '</span>';
-  }).join('') + '</div>' +
-    '<div class="lvfoot"><span>累積 ' + pt(a.pt) + 'P ／ 直紹介 ' + pt(a.direct) + 'P' + (lv < 7 ? ' ／ Lv7まで あと' + (7 - lv) + 'レベル' : '') + '</span>' +
-    '<button class="linkbtn" data-page="points">ポイントの内訳</button></div>' +
-    '<div class="asof">' + postedText() + '</div></div>';
-  return h;
+  h += '<div class="hrow">';
+  if (showLv) {
+    var lv = parseInt(f.level, 10) || 1, nx = lv < 7 ? LEVELS[lv - 1] : null, from = lv >= 2 ? LEVELS[lv - 2].pt : 0;
+    var rate = nx ? Math.max(0, Math.min(1, (f.pt - from) / (nx.pt - from))) : 1;
+    h += '<div class="hbox" data-page="points"><div class="lbl">レベル</div><div class="lvnum gold">Lv' + lv + '</div>' +
+      '<div class="sub">' + (nx ? 'Lv' + nx.lv + 'まで あと ' + pt(Math.max(0, nx.pt - f.pt)) + 'P' + (nx.direct > f.direct ? '（直紹介 あと ' + pt(nx.direct - f.direct) + 'P）' : '') : 'いちばん上のレベル') + '</div>' +
+      '<div class="gbar"><i style="width:' + Math.round(rate * 100) + '%"></i></div>' +
+      '<div class="glad">' + [1, 2, 3, 4, 5, 6, 7].map(function (n) { return '<span class="' + (n === lv ? 'now' : n < lv ? 'done' : '') + '">' + n + '</span>'; }).join('') + '</div></div>';
+  }
+  h += '<div class="hbox" data-page="points"><div class="lbl">累積ポイント</div><div class="lvnum gold">' + pt(f.pt) + '<small>P</small></div>' +
+    '<div class="sub">直紹介 ' + pt(f.direct) + 'P</div></div>';
+  return h + '</div><div class="hfoot">' + postedText() + '</div></div>';
 }
 // ポイントがいつの計上分まで入っているか（毎月21日に計上）
 function postedText() {
@@ -610,8 +640,8 @@ function rewardPage(f) {
   h += '<div class="seg" style="margin-bottom:10px">' + rw.months.map(function (m, i) {
     return '<button data-rwmonth="' + i + '" class="' + (i === mi ? 'on' : '') + '">' + esc(m.label) + '</button>';
   }).join('') + '</div>';
-  h += '<div class="panel rwcard"><div class="lvsub">' + (mine ? '' : esc(f.name) + 'さんの') + esc(mo.label) + 'の見込み報酬（' + esc(mo.pay) + 'お支払い予定）</div>' +
-    '<div class="big">' + usd2(rw.subsc ? sm.total : 0) + '</div><div class="yen">約' + yen(rw.subsc ? sm.total : 0) + '</div>' +
+  h += '<div class="panel rwcard hero"><div class="lvsub">' + (mine ? '' : esc(f.name) + 'さんの') + esc(mo.label) + 'の見込み報酬（' + esc(mo.pay) + 'お支払い予定）</div>' +
+    '<div class="big gold">' + usd2(rw.subsc ? sm.total : 0) + '</div><div class="yen">約' + yen(rw.subsc ? sm.total : 0) + '</div>' +
     '<div class="rwsplit"><div><span class="lbl">新規</span><b>' + usd2(sm.new) + '</b></div>' +
     '<div><span class="lbl">継続</span><b>' + usd2(sm.cont) + '</b></div>' +
     '<div><span class="lbl">うちアドバイザー</span><b>' + usd2(sm.role['アドバイザー']) + '</b></div></div>' +
@@ -644,7 +674,7 @@ function rewardBasis(items, f, mo) {
   if (!items.length || !items[0][7]) return h + '<p class="empty">この月の計算はありません。</p>';
   var who = f.code === D.me ? 'あなた' : esc(nameOf(f.code)) + 'さん';
   var pc = function (v) { return (Math.round((Number(v) || 0) * 100) / 100) + '%'; };
-  var lvOf = function (code, lv) { return code === COMPANY_CODE || !lv ? '' : 'Lv' + esc(lv) + '・'; };
+  var lvOf = function (code, lv) { return coHidden(code) || !lv ? '' : 'Lv' + esc(lv) + '・'; };
   var b0 = items[0][7], cont = items[0][4] !== '新規';
   h += '<p class="lvsub" style="margin:-4px 0 10px">入金額 <b>' + usd2(b0.pay) + '</b>（月額 ' + usd(b0.amt) + ' × ' + b0.every + 'か月分）・' + b0.years + '年・' + items[0][3] + '年目・' + esc(items[0][4]) + '</p>';
   items.forEach(function (x) {
@@ -670,8 +700,11 @@ function rewardBasis(items, f, mo) {
 // ポイント：合計と、すべての履歴
 function pointsPage(f) {
   var h = '<div class="panel" style="margin-bottom:12px"><h2>ポイント' + (f.code === D.me ? '' : ' <small>' + esc(f.name) + 'さん</small>') + '</h2>' +
-    '<div class="tiles" style="margin-bottom:6px">' + tile('累積ポイント', pt(f.pt), 'P', '') + tile('直紹介ポイント', pt(f.direct), 'P', '') + '</div>' +
-    '<div class="lvsub">' + postedText() + '</div></div>';
+    '<div class="hero" style="margin-bottom:6px"><div class="hrow">' +
+    '<div class="hbox"><div class="lbl">累積ポイント</div><div class="lvnum gold">' + pt(f.pt) + '<small>P</small></div></div>' +
+    '<div class="hbox"><div class="lbl">直紹介ポイント</div><div class="lvnum gold">' + pt(f.direct) + '<small>P</small></div>' +
+    (coHidden(f.code) ? '' : '<div class="sub">いまのレベル Lv' + esc(f.level) + '</div>') + '</div></div>' +
+    '<div class="hfoot">' + postedText() + '</div></div></div>';
   return h + '<div class="panel">' + historyTable(f.code, 0) + '</div>';
 }
 
@@ -718,7 +751,7 @@ function agentRow(a, extra) {
   var n = under(a.code).length;
   return '<button class="row' + (sel ? ' sel' : '') + (a.code === D.me ? ' me' : '') + '" data-agent="' + esc(a.code) + '">' +
     '<span class="left"><span class="nm">' + esc(a.name) + '</span><span class="meta">' + esc(a.code) + (extra ? ' ・ ' + esc(extra) : '') + '</span></span>' +
-    '<span class="right">' + (a.code === COMPANY_CODE ? '' : '<span class="badge lv">Lv' + esc(a.level) + '</span> ') +
+    '<span class="right">' + (coHidden(a.code) ? '' : '<span class="badge lv">Lv' + esc(a.level) + '</span> ') +
     (a.subsc ? '' : '<span class="badge ng">サブスク未払い</span> ') + '<br>' + pt(a.pt) + 'P' + (n ? ' ・ 下に' + n + '名' : '') + '</span></button>';
 }
 function treePanel(scope) {
@@ -752,7 +785,7 @@ function chartNode(code) {
   var sel = S.sel && S.sel.type === 'agent' && S.sel.id === code;
   var h = '<li><button class="cnode' + (code === D.me ? ' me' : '') + (a.subsc ? '' : ' off') + (sel ? ' sel' : '') + '" data-agent="' + esc(code) + '">' + ICON_AGENT +
     '<span class="b"><span class="nm">' + esc(a.name) + '</span><span class="meta">' + esc(code) + '</span>' +
-    '<span class="st">' + (code === COMPANY_CODE ? '' : 'Lv' + esc(a.level) + ' ・ ') + pt(a.pt) + 'P</span>' +
+    '<span class="st">' + (coHidden(code) ? '' : 'Lv' + esc(a.level) + ' ・ ') + pt(a.pt) + 'P</span>' +
     (own.length ? '<span class="meta">紹介した契約 ' + own.length + '件</span>' : '') +
     (a.subsc ? '' : '<span class="st" style="color:var(--red)">サブスク未払い</span>') + '</span></button>';
   if (ch.length) {
@@ -823,7 +856,7 @@ function agentDetail(a) {
   var h = '<h2>代理店の詳細</h2><dl class="kv">' +
     '<dt>名前</dt><dd>' + esc(a.name) + '</dd><dt>代理店コード</dt><dd>' + esc(a.code) + '</dd>' +
     (a.parent && byCode[a.parent] ? '<dt>紹介者</dt><dd>' + esc(label(a.parent)) + '</dd>' : '') +
-    (a.code === COMPANY_CODE ? '' : '<dt>レベル</dt><dd>Lv' + esc(a.level) + '</dd>') +
+    (coHidden(a.code) ? '' : '<dt>レベル</dt><dd>Lv' + esc(a.level) + '</dd>') +
     '<dt>累積ポイント</dt><dd>' + pt(a.pt) + 'P</dd><dt>直紹介ポイント</dt><dd>' + pt(a.direct) + 'P</dd>' +
     '<dt>サブスク</dt><dd>' + (a.subsc ? '<span class="badge ok">支払い済み</span>' : '<span class="badge ng">未払い</span>') + '</dd>' +
     '<dt>組織</dt><dd>すぐ下 ' + kids[a.code].length + '名 ／ 全体 ' + down.length + '名</dd></dl>';
@@ -835,7 +868,7 @@ function agentDetail(a) {
   if (a.code !== S.focus && down.length) h += '<button class="main" data-focus="' + esc(a.code) + '">この人から下を見る</button>';
   h += historyBlock(a.code);
   // 見出しの主語：会社は「会社が」、ログインした本人は「あなたが」、ほかの人は「◯◯さんが」
-  var subject = a.code === COMPANY_CODE ? '会社' : (a.code === D.me ? 'あなた' : a.name + 'さん');
+  var subject = coHidden(a.code) ? '会社' : (a.code === D.me ? 'あなた' : a.name + 'さん');
   h += '<h3>' + esc(subject) + 'が紹介した契約（' + own.length + '件）</h3>';
   h += own.length ? '<div class="list">' + own.map(function (k) { return conRow(k, D.contracts.indexOf(k)); }).join('') + '</div>' : '<p class="empty">まだありません。</p>';
   return h;
