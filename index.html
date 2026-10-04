@@ -40,6 +40,8 @@
   header .in { max-width: 1100px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   header h1 { margin: 0; font-size: 22px; }
   header p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
+  header h1 .who { display: inline-block; margin-left: 12px; font-size: 15px; font-weight: 700; color: #efe4c4; -webkit-text-fill-color: #efe4c4; vertical-align: 2px; }
+  header h1 .who:empty { display: none; }
   header .side { font-size: 12px; opacity: .85; text-align: right; }
   header .side button { margin-left: 8px; }
   main { max-width: 1100px; margin: 0 auto; padding: 16px; }
@@ -290,7 +292,7 @@
 <header>
   <div class="in">
     <div>
-      <h1>組織管理</h1>
+      <h1>組織管理<span class="who" id="who"></span></h1>
       <p>自分と、自分より下の代理店・契約を確認できます</p>
     </div>
     <div class="side" id="side"></div>
@@ -432,6 +434,7 @@ function fetchData(token, code) {
 }
 function showLogin(msg) {
   document.getElementById('side').innerHTML = '';
+  document.getElementById('who').textContent = '';
   document.getElementById('app').innerHTML =
     '<div class="panel login"><h2>ログイン</h2>' +
     '<p>マイページに登録しているメールアドレスを入力してください。確認の番号（6けた）をメールで送ります。</p>' +
@@ -474,6 +477,9 @@ function load(data) {
   render();
 }
 function renderSide() {
+  // 見出しの後ろに、見ている本人（例：E-001 宮田良子さん）。会社用で「会社」と表示する人は出さない
+  var me = byCode[D.me];
+  document.getElementById('who').textContent = me && !coHidden(D.me) ? D.me + ' ' + me.name + 'さん' : '';
   var h = (LIVE ? '' : '見本データで表示中　') + esc(D.asOf) + ' 時点';
   if (D.codes && D.codes.length > 1) {
     h += ' <select id="codesel" style="width:auto;padding:2px 8px">' + D.codes.map(function (c) {
