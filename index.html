@@ -269,6 +269,12 @@
   .badge.new { background: var(--green-soft); color: var(--green); }
   .sec { margin: 4px 2px 8px; font-size: 16px; font-weight: 700; color: var(--navy); }
 
+  /* 代理店区分ごとの支払い見込み */
+  table.pay td.l, table.pay th.l { text-align: left; }
+  table.pay tr.pick { cursor: pointer; }
+  table.pay tr.pick:hover, table.pay tr.on { background: var(--navy-soft); }
+  table.pay tr.tot td { font-weight: 700; border-top: 2px solid var(--line); }
+  table.pay td, table.pay th { white-space: nowrap; }
   /* 確認の小窓（会社のコミッション） */
   .modal { position: fixed; inset: 0; z-index: 50; background: rgba(11, 11, 11, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
   .modal .box { background: #fff; border-radius: 14px; padding: 18px; max-width: 420px; width: 100%; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); }
@@ -715,31 +721,63 @@ function rewardPage(f) {
   }
   return h;
 }
-// 会社が代理店に支払う見込み（D.payout：[コード, 名前, 決済済み, 新規, 継続, うちアドバイザー, 手続き中, スタートアップ参加]）。押すとその人の報酬
+// 会社が代理店に支払う見込み（D.payout の rows：[コード, 名前, 決済済み, 新規, 継続, うちアドバイザー, 手続き中, スタートアップ参加, 代理店区分, うち紹介, うち差額]）
+// まず全体 → 代理店区分ごと（押すと、その区分の内訳と代理店ごとの一覧）。代理店を押すとその人の報酬
+function paySum(rows) {
+  var s = { n: rows.length, paid: 0, nw: 0, cont: 0, adv: 0, wait: 0, hold: 0, intro: 0, diff: 0 };
+  rows.forEach(function (r) {
+    s.paid += r[2]; s.nw += r[3]; s.cont += r[4]; s.adv += r[5]; s.wait += r[6]; s.intro += r[9] || 0; s.diff += r[10] || 0;
+    if (!r[7]) s.hold += r[2];
+  });
+  return s;
+}
+function payKubunOf(r) { return r[8] || (/^[A-Z]+/.exec(r[0]) || [''])[0] || '—'; }
 function payoutBlock(mi) {
   var p = (D.payout || [])[mi];
   if (!p) return '';
-  var s = { paid: 0, nw: 0, cont: 0, adv: 0, wait: 0, hold: 0 };
-  p.rows.forEach(function (r) { s.paid += r[2]; s.nw += r[3]; s.cont += r[4]; s.adv += r[5]; s.wait += r[6]; if (!r[7]) s.hold += r[2]; });
+  var s = paySum(p.rows);
   var h = '<div class="panel rwcard hero"><div class="lvsub">代理店へのお支払い見込み　' + esc(p.label) + '（' + esc(p.pay) + 'お支払い予定）</div>' +
-    '<div class="big gold">' + usd2(s.paid) + '</div><div class="yen">約' + yen(s.paid) + '　' + p.rows.length + '名</div>' +
+    '<div class="big gold">' + usd2(s.paid) + '</div><div class="yen">約' + yen(s.paid) + '　' + s.n + '名</div>' +
     '<div class="rwsplit"><div><span class="lbl">新規</span><b>' + usd2(s.nw) + '</b></div>' +
     '<div><span class="lbl">継続</span><b>' + usd2(s.cont) + '</b></div>' +
     '<div><span class="lbl">うちアドバイザー</span><b>' + usd2(s.adv) + '</b></div></div>' +
     (s.hold ? '<div class="lvneed" style="font-size:14px;margin-top:12px">うち保留（スタートアップ未参加） <b>' + usd2(s.hold) + '</b></div>' : '') +
     (s.wait ? '<div class="lvneed" style="font-size:14px;margin-top:8px">手続き中の契約が決済されれば <b style="font-size:20px">+' + usd2(s.wait) + '</b>（約' + yen(s.wait) + '）</div>' : '') +
     '<div class="asof">コミッション計算と同じ決め方の目安です（サブスク未払いの人の分は、上のサブスク有効な人に移したあと）。会社（ABCD-1）の分は入れず、下に別に出しています。</div></div>';
-  var all = S.payAll, rows = all ? p.rows : p.rows.slice(0, 20);
-  h += '<div class="panel" style="margin-bottom:12px"><h2>代理店ごと <small>' + p.rows.length + '名・多い順</small></h2>';
-  if (!rows.length) return h + '<p class="empty">この月の見込みはありません。</p></div>';
-  h += '<div class="list">' + rows.map(function (r) {
-    var tag = byCode[r[0]] ? 'button' : 'div';
-    return '<' + tag + ' class="row"' + (byCode[r[0]] ? ' data-rwagent="' + esc(r[0]) + '"' : '') + '>' +
-      '<span class="left"><span class="nm">' + esc(r[1]) + '</span><span class="meta">' + esc(r[0]) + ' ・ 新規 ' + usd2(r[3]) + ' ・ 継続 ' + usd2(r[4]) + '</span></span>' +
-      '<span class="right">' + (r[7] ? '' : '<span class="badge wait">保留</span> ') + (r[6] ? '<span class="badge wait">決済されれば +' + usd2(r[6]) + '</span>' : '') +
-      '<br><b style="color:var(--navy);font-size:14px">' + usd2(r[2]) + '</b></span></' + tag + '>';
-  }).join('') + '</div>';
-  if (p.rows.length > 20) h += '<button class="ghost" data-act="payall" style="margin-top:8px">' + (all ? '上位20名だけにする' : 'すべて見る（' + p.rows.length + '名）') + '</button>';
+  // 代理店区分ごと
+  var groups = {}, order = [];
+  p.rows.forEach(function (r) { var k = payKubunOf(r); if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(r); });
+  var sums = {}; order.forEach(function (k) { sums[k] = paySum(groups[k]); });
+  order.sort(function (a, b) { return sums[b].paid - sums[a].paid || a.localeCompare(b); });
+  var sel = S.payKubun && groups[S.payKubun] ? S.payKubun : '';
+  h += '<div class="panel" style="margin-bottom:12px"><h2>代理店区分ごと <small>' + order.length + '区分・多い順・押すと詳細</small></h2>' +
+    '<div style="overflow-x:auto"><table class="pay"><tr><th class="l">区分</th><th>人数</th><th>お支払い見込み</th><th>新規</th><th>継続</th><th>割合</th></tr>' +
+    order.map(function (k) {
+      var x = sums[k];
+      return '<tr class="pick' + (k === sel ? ' on' : '') + '" data-paykubun="' + esc(k) + '"><td class="l"><b>' + esc(k) + '</b></td><td>' + x.n + '名</td><td><b>' + usd2(x.paid) + '</b></td>' +
+        '<td>' + usd2(x.nw) + '</td><td>' + usd2(x.cont) + '</td><td>' + (s.paid ? Math.round(x.paid / s.paid * 1000) / 10 : 0) + '%</td></tr>';
+    }).join('') +
+    '<tr class="tot"><td class="l">合計</td><td>' + s.n + '名</td><td><b>' + usd2(s.paid) + '</b></td><td>' + usd2(s.nw) + '</td><td>' + usd2(s.cont) + '</td><td>100%</td></tr></table></div></div>';
+  if (!sel) return h;
+  // 選んだ区分の詳細
+  var g = sums[sel], all = S.payAll, rows = groups[sel].slice().sort(function (a, b) { return b[2] - a[2] || b[6] - a[6]; });
+  var show = all ? rows : rows.slice(0, 30);
+  h += '<div class="panel" style="margin-bottom:12px" id="paydetail"><h2>区分 ' + esc(sel) + ' の詳細 <small>' + g.n + '名</small></h2>' +
+    '<div class="rwsplit" style="margin:0 0 6px"><div><span class="lbl">お支払い見込み</span><b>' + usd2(g.paid) + '</b></div>' +
+    '<div><span class="lbl">新規</span><b>' + usd2(g.nw) + '</b></div><div><span class="lbl">継続</span><b>' + usd2(g.cont) + '</b></div></div>' +
+    '<div class="rwsplit" style="margin:0 0 6px"><div><span class="lbl">紹介</span><b>' + usd2(g.intro) + '</b></div>' +
+    '<div><span class="lbl">差額</span><b>' + usd2(g.diff) + '</b></div><div><span class="lbl">アドバイザー</span><b>' + usd2(g.adv) + '</b></div></div>' +
+    (g.hold || g.wait ? '<p class="lvsub" style="margin:4px 0 10px">' + (g.hold ? 'うち保留（スタートアップ未参加） ' + usd2(g.hold) : '') + (g.hold && g.wait ? '　／　' : '') +
+      (g.wait ? '手続き中の契約が決済されれば +' + usd2(g.wait) : '') + '</p>' : '') +
+    '<h3>代理店ごと（多い順）</h3><div class="list">' + show.map(function (r) {
+      var tag = byCode[r[0]] ? 'button' : 'div';
+      return '<' + tag + ' class="row"' + (byCode[r[0]] ? ' data-rwagent="' + esc(r[0]) + '"' : '') + '>' +
+        '<span class="left"><span class="nm">' + esc(r[1]) + '</span><span class="meta">' + esc(r[0]) + ' ・ 新規 ' + usd2(r[3]) + ' ・ 継続 ' + usd2(r[4]) +
+        ' ・ 紹介 ' + usd2(r[9] || 0) + ' ・ 差額 ' + usd2(r[10] || 0) + (r[5] ? ' ・ アドバイザー ' + usd2(r[5]) : '') + '</span></span>' +
+        '<span class="right">' + (r[7] ? '' : '<span class="badge wait">保留</span> ') + (r[6] ? '<span class="badge wait">決済されれば +' + usd2(r[6]) + '</span>' : '') +
+        '<br><b style="color:var(--navy);font-size:14px">' + usd2(r[2]) + '</b></span></' + tag + '>';
+    }).join('') + '</div>';
+  if (rows.length > 30) h += '<button class="ghost" data-act="payall" style="margin-top:8px">' + (all ? '上位30名だけにする' : 'すべて見る（' + rows.length + '名）') + '</button>';
   return h + '</div>';
 }
 // この報酬の計算：入金額 × 率。差額は「受け取る人の率 − 下の代理店の率」
@@ -1004,7 +1042,7 @@ function stepsDetail(st) {
 
 /* ================= 操作 ================= */
 document.getElementById('app').addEventListener('click', function (e) {
-  var el = e.target.closest('[data-rwmonth],[data-rwagent],[data-page],[data-tab],[data-tog],[data-agent],[data-contract],[data-focus],[data-act],[data-month],[data-view],[data-zoom],[data-kubun],[data-go]');
+  var el = e.target.closest('[data-rwmonth],[data-rwagent],[data-paykubun],[data-page],[data-tab],[data-tog],[data-agent],[data-contract],[data-focus],[data-act],[data-month],[data-view],[data-zoom],[data-kubun],[data-go]');
   if (!el || !D) return;
   var d = el.dataset;
   if (d.rwmonth) { S.rwMonth = Number(d.rwmonth); }
@@ -1014,6 +1052,7 @@ document.getElementById('app').addEventListener('click', function (e) {
     if (!D.companyPerson) { delete D.rewards[COMPANY_CODE]; S.page = 'home'; }
   }
   else if (d.act === 'payall') S.payAll = !S.payAll;
+  else if (d.paykubun) { S.payKubun = S.payKubun === d.paykubun ? '' : d.paykubun; S.payAll = false; } // もう一度押すと閉じる
   else if (d.page) { goPage(d.page); }
   else if (d.tab) { S.tab = d.tab; if (d.tab !== 'contracts') S.month = ''; }
   else if (d.tog) S.open[d.tog] = !S.open[d.tog];
@@ -1047,6 +1086,8 @@ document.getElementById('app').addEventListener('click', function (e) {
   wrap = document.querySelector('.chartwrap');
   if (wrap) wrap.scrollLeft = sx;
   if (d.go || d.page || d.rwagent || d.act === 'hideco') window.scrollTo(0, 0);
+  var pd = d.paykubun && document.getElementById('paydetail'); // 区分を押したら、その詳細へ
+  if (pd) pd.scrollIntoView({ behavior: 'smooth', block: 'start' });
   var det = document.getElementById('detail');
   if (det && (d.agent || d.contract || d.act === 'back') && (S.page === 'reward' || isChart() || window.matchMedia('(max-width: 760px)').matches)) {
     det.scrollIntoView({ behavior: 'smooth', block: 'start' });
