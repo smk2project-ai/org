@@ -649,7 +649,7 @@ function rewardPage(f) {
     h += '<div class="alert ng"><b>サブスクが未払いのため、報酬は発生しません</b>' +
       '紹介した契約の報酬は、上の代理店に移ります。' + (rw.potential ? 'お支払いいただいていれば、下の月の分で 約' + usd2(rw.potential) + '（' + yen(rw.potential) + '）の見込みでした。' : '') + '</div>';
   }
-  if (rw.subsc && !rw.startup) {
+  if (rw.subsc && !rw.startup && f.code !== COMPANY_CODE) { // 会社はスタートアップの対象外
     h += '<div class="alert hold"><b>スタートアップに参加していないため、報酬は保留になります</b>' +
       '参加した月に、それまでの分をまとめてお支払いします。</div>';
   }
