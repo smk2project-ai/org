@@ -269,6 +269,13 @@
   .badge.new { background: var(--green-soft); color: var(--green); }
   .sec { margin: 4px 2px 8px; font-size: 16px; font-weight: 700; color: var(--navy); }
 
+  /* 確認の小窓（会社のコミッション） */
+  .modal { position: fixed; inset: 0; z-index: 50; background: rgba(11, 11, 11, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal .box { background: #fff; border-radius: 14px; padding: 18px; max-width: 420px; width: 100%; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); }
+  .modal h2 { margin: 0 0 8px; font-size: 16px; color: var(--red); }
+  .modal p { margin: 0 0 10px; font-size: 14px; }
+  .modal .err { color: var(--red); min-height: 1.4em; }
+  .modal .act { display: flex; gap: 8px; justify-content: flex-end; }
   /* トップへ戻る（下にスクロールしたときだけ出る） */
   .totop { position: fixed; right: 18px; bottom: 22px; z-index: 30; border: none; border-radius: 999px; background: var(--navy); color: #fff;
     padding: 10px 16px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 12px rgba(20, 49, 92, .3); display: flex; align-items: center; gap: 6px;
@@ -484,7 +491,7 @@ function renderSide() {
   // 見出しの後ろに、見ている本人（例：E-001 宮田良子さん）。会社用で「会社」と表示する人は出さない
   var me = byCode[D.me];
   document.getElementById('who').textContent = me && !coHidden(D.me) ? D.me + ' ' + me.name + 'さん' : '';
-  var h = (LIVE ? '' : '見本データで表示中　') + esc(D.asOf) + ' 時点';
+  var h = (LIVE ? '' : '見本データで表示中　') + '<span id="asof">' + esc(D.asOf) + ' 時点</span>';
   if (D.codes && D.codes.length > 1) {
     h += ' <select id="codesel" style="width:auto;padding:2px 8px">' + D.codes.map(function (c) {
       return '<option' + (c === D.me ? ' selected' : '') + '>' + esc(c) + '</option>';
@@ -494,8 +501,35 @@ function renderSide() {
   document.getElementById('side').innerHTML = h;
   var sel = document.getElementById('codesel');
   if (sel) sel.onchange = function () { fetchData(getToken(), sel.value); };
+  if (D.company) document.getElementById('asof').onclick = coConfirm; // 会社用の隠しボタン
   var lo = document.getElementById('logout');
   if (lo) lo.onclick = function () { call('orgLogout', [getToken()], function () {}, function () {}); setToken(''); showLogin(); };
+}
+
+// 会社のコミッション（会社用の隠しボタン）：確認してから読み込み、報酬のページで出す
+function coConfirm() {
+  if (!D || !D.company || document.getElementById('comodal')) return;
+  var m = document.createElement('div');
+  m.id = 'comodal'; m.className = 'modal';
+  m.innerHTML = '<div class="box"><h2>会社のコミッションを表示します</h2>' +
+    '<p>代理店へのお支払い見込みと、会社（ABCD-1）の分が出ます。<b>まわりに人がいないか、画面を見せていないか</b>確かめてから表示してください。</p>' +
+    '<p class="err" id="coerr"></p><div class="act"><button class="main" id="cook">表示する</button><button class="ghost" id="cono">やめる</button></div></div>';
+  document.body.appendChild(m);
+  var close = function () { m.remove(); };
+  document.getElementById('cono').onclick = close;
+  m.onclick = function (e) { if (e.target === m) close(); };
+  document.getElementById('cook').onclick = function () {
+    var err = document.getElementById('coerr');
+    err.textContent = '読み込み中…';
+    var show = function () { close(); S.showCo = true; goPage('reward'); S.focus = D.me; S.sel = { type: 'agent', id: D.me }; render(); window.scrollTo(0, 0); };
+    if (!LIVE) { D.payout = []; show(); return; }
+    call('orgCompany', [getToken()], function (res) {
+      if (!res || !res.ok) { err.textContent = (res && res.message) || '表示できません。'; return; }
+      D.payout = res.payout;
+      if (res.reward) (D.rewards = D.rewards || {})[COMPANY_CODE] = res.reward;
+      show();
+    }, function (msg) { err.textContent = msg; });
+  };
 }
 
 /* ================= 集計 ================= */
@@ -583,8 +617,6 @@ function homePage(f, down, cons) {
 }
 // 金のカード：見込み報酬（いちばん大きく）・レベル・ポイント。押すと報酬／ポイントのページへ
 function goldHero(f) {
-  // 会社用（会社を本人として見ない人）：会社のコミッションはボタンを押したときだけ出す
-  if (coHidden(f.code)) return D.payout ? '<div class="hero"><button class="hnext" style="margin-top:0" data-act="showco">会社のコミッション（代理店への支払い見込み・会社の分）を見る　›</button></div>' : '';
   var rw = rewardOf(f.code), showLv = !coHidden(f.code);
   if (!rw && !showLv) return '';
   var h = '<div class="hero">';
@@ -634,11 +666,8 @@ function monthSum(mo) {
   return s;
 }
 function rewardPage(f) {
-  var coView = D.company && f.code === COMPANY_CODE && D.payout; // 会社の報酬ページ：代理店への支払い見込み＋会社の分
-  if (coView && coHidden(f.code) && !S.showCo) {
-    return '<div class="panel"><h2>会社のコミッション</h2><p class="lvsub" style="margin:0 0 10px">代理店へのお支払い見込みと、会社（ABCD-1）の分を出します。</p>' +
-      '<button class="main" data-act="showco">会社のコミッションを見る</button></div>';
-  }
+  // 会社のコミッション（代理店への支払い見込み＋会社の分）：見出しの「◯時点」を押す（隠しボタン）→ 確認 のあとだけ
+  var coView = D.company && f.code === COMPANY_CODE && S.showCo && D.payout;
   var rw = rewardOf(f.code), mine = f.code === D.me;
   if (!rw) {
     return '<div class="panel"><h2>報酬</h2><p class="empty">' + (f.code === COMPANY_CODE ? '会社の分は出していません。' : '報酬は、ご自身の分だけ表示します。') + '</p>' +
@@ -657,7 +686,7 @@ function rewardPage(f) {
   h += '<div class="seg" style="margin-bottom:10px">' + rw.months.map(function (m, i) {
     return '<button data-rwmonth="' + i + '" class="' + (i === mi ? 'on' : '') + '">' + esc(m.label) + '</button>';
   }).join('') + '</div>';
-  if (coView) h += payoutBlock(mi);
+  if (coView) h += '<div style="text-align:right;margin:-4px 0 8px"><button class="mini ghost" data-act="hideco">会社のコミッションを隠す</button></div>' + payoutBlock(mi);
   h += '<div class="panel rwcard hero"><div class="lvsub">' + (coView ? '会社（ABCD-1）の分　' : mine ? '' : esc(f.name) + 'さんの') + esc(mo.label) + 'の見込み報酬（' + esc(mo.pay) + 'お支払い予定）</div>' +
     '<div class="big gold">' + usd2(rw.subsc ? sm.total : 0) + '</div><div class="yen">約' + yen(rw.subsc ? sm.total : 0) + '</div>' +
     '<div class="rwsplit"><div><span class="lbl">新規</span><b>' + usd2(sm.new) + '</b></div>' +
@@ -980,7 +1009,10 @@ document.getElementById('app').addEventListener('click', function (e) {
   var d = el.dataset;
   if (d.rwmonth) { S.rwMonth = Number(d.rwmonth); }
   else if (d.rwagent) { goPage('reward'); S.focus = d.rwagent; S.sel = { type: 'agent', id: d.rwagent }; } // 支払い見込みの一覧から、その人の報酬へ
-  else if (d.act === 'showco') { S.showCo = true; goPage('reward'); S.focus = D.me; S.sel = { type: 'agent', id: D.me }; }
+  else if (d.act === 'hideco') { // 隠す：読み込んだ分も捨てる（会社を本人として見る人は、自分の報酬として会社の分を残す）
+    S.showCo = false; D.payout = null;
+    if (!D.companyPerson) { delete D.rewards[COMPANY_CODE]; S.page = 'home'; }
+  }
   else if (d.act === 'payall') S.payAll = !S.payAll;
   else if (d.page) { goPage(d.page); }
   else if (d.tab) { S.tab = d.tab; if (d.tab !== 'contracts') S.month = ''; }
@@ -1014,7 +1046,7 @@ document.getElementById('app').addEventListener('click', function (e) {
   render();
   wrap = document.querySelector('.chartwrap');
   if (wrap) wrap.scrollLeft = sx;
-  if (d.go || d.page || d.rwagent || d.act === 'showco') window.scrollTo(0, 0);
+  if (d.go || d.page || d.rwagent || d.act === 'hideco') window.scrollTo(0, 0);
   var det = document.getElementById('detail');
   if (det && (d.agent || d.contract || d.act === 'back') && (S.page === 'reward' || isChart() || window.matchMedia('(max-width: 760px)').matches)) {
     det.scrollIntoView({ behavior: 'smooth', block: 'start' });
