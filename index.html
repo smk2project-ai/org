@@ -527,12 +527,11 @@ function coConfirm() {
   document.getElementById('cook').onclick = function () {
     var err = document.getElementById('coerr');
     err.textContent = '読み込み中…';
-    var show = function () { close(); S.showCo = true; goPage('reward'); S.focus = D.me; S.sel = { type: 'agent', id: D.me }; render(); window.scrollTo(0, 0); };
+    var show = function () { close(); goPage('company'); S.focus = D.me; S.sel = { type: 'agent', id: D.me }; render(); window.scrollTo(0, 0); };
     if (!LIVE) { D.payout = []; show(); return; }
     call('orgCompany', [getToken()], function (res) {
       if (!res || !res.ok) { err.textContent = (res && res.message) || '表示できません。'; return; }
       D.payout = res.payout;
-      if (res.reward) (D.rewards = D.rewards || {})[COMPANY_CODE] = res.reward;
       show();
     }, function (msg) { err.textContent = msg; });
   };
@@ -592,6 +591,7 @@ function render() {
   if (S.page === 'home') h += homePage(f, down, cons);
   else if (S.page === 'points') h += pointsPage(f);
   else if (S.page === 'reward') h += rewardPage(f);
+  else if (S.page === 'company') h += companyPage();
   else {
     if (D.company && S.page === 'org') h += kubunBar();
     h += '<div class="tools"><input type="search" id="q" placeholder="' + (S.page === 'org' ? '名前・代理店コードで検索' : '契約者・紹介者で検索') + '" value="' + esc(S.q) + '"></div>';
@@ -672,8 +672,6 @@ function monthSum(mo) {
   return s;
 }
 function rewardPage(f) {
-  // 会社のコミッション（代理店への支払い見込み＋会社の分）：見出しの「◯時点」を押す（隠しボタン）→ 確認 のあとだけ
-  var coView = D.company && f.code === COMPANY_CODE && S.showCo && D.payout;
   var rw = rewardOf(f.code), mine = f.code === D.me;
   if (!rw) {
     return '<div class="panel"><h2>報酬</h2><p class="empty">' + (f.code === COMPANY_CODE ? '会社の分は出していません。' : '報酬は、ご自身の分だけ表示します。') + '</p>' +
@@ -692,8 +690,8 @@ function rewardPage(f) {
   h += '<div class="seg" style="margin-bottom:10px">' + rw.months.map(function (m, i) {
     return '<button data-rwmonth="' + i + '" class="' + (i === mi ? 'on' : '') + '">' + esc(m.label) + '</button>';
   }).join('') + '</div>';
-  if (coView) h += '<div style="text-align:right;margin:-4px 0 8px"><button class="mini ghost" data-act="hideco">会社のコミッションを隠す</button></div>' + payoutBlock(mi);
-  h += '<div class="panel rwcard hero"><div class="lvsub">' + (coView ? '会社（ABCD-1）の分　' : mine ? '' : esc(f.name) + 'さんの') + esc(mo.label) + 'の見込み報酬（' + esc(mo.pay) + 'お支払い予定）</div>' +
+  if (D.payout && f.code !== D.me) h += '<div style="margin:-4px 0 8px"><button class="mini ghost" data-act="backco">‹ 会社の支払い見込みに戻る</button></div>';
+  h += '<div class="panel rwcard hero"><div class="lvsub">' + (mine ? '' : esc(f.name) + 'さんの') + esc(mo.label) + 'の見込み報酬（' + esc(mo.pay) + 'お支払い予定）</div>' +
     '<div class="big gold">' + usd2(rw.subsc ? sm.total : 0) + '</div><div class="yen">約' + yen(rw.subsc ? sm.total : 0) + '</div>' +
     '<div class="rwsplit"><div><span class="lbl">新規</span><b>' + usd2(sm.new) + '</b></div>' +
     '<div><span class="lbl">継続</span><b>' + usd2(sm.cont) + '</b></div>' +
@@ -722,6 +720,17 @@ function rewardPage(f) {
   return h;
 }
 // 会社が代理店に支払う見込み（D.payout の rows：[コード, 名前, 決済済み, 新規, 継続, うちアドバイザー, 手続き中, スタートアップ参加, 代理店区分, うち紹介, うち差額]）
+// 隠しページ（会社用）：会社が代理店に支払う見込み。メニューには出さず、見出しの「◯時点」→ 確認 のあとだけ開く
+function companyPage() {
+  var h = '<div class="panel" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">' +
+    '<h2 style="margin:0">会社の支払い見込み</h2><button class="mini ghost" data-act="hideco">閉じる</button></div>';
+  if (!D.payout || !D.payout.length) return h + '<div class="panel"><p class="empty">見込みはありません。</p></div>';
+  var mi = Math.min(S.rwMonth || 0, D.payout.length - 1);
+  h += '<div class="seg" style="margin-bottom:10px">' + D.payout.map(function (m, i) {
+    return '<button data-rwmonth="' + i + '" class="' + (i === mi ? 'on' : '') + '">' + esc(m.label) + '</button>';
+  }).join('') + '</div>';
+  return h + payoutBlock(mi);
+}
 // まず全体 → 代理店区分ごと（押すと、その区分の内訳と代理店ごとの一覧）。代理店を押すとその人の報酬
 function paySum(rows) {
   var s = { n: rows.length, paid: 0, nw: 0, cont: 0, adv: 0, wait: 0, hold: 0, intro: 0, diff: 0 };
@@ -743,7 +752,7 @@ function payoutBlock(mi) {
     '<div><span class="lbl">うちアドバイザー</span><b>' + usd2(s.adv) + '</b></div></div>' +
     (s.hold ? '<div class="lvneed" style="font-size:14px;margin-top:12px">うち保留（スタートアップ未参加） <b>' + usd2(s.hold) + '</b></div>' : '') +
     (s.wait ? '<div class="lvneed" style="font-size:14px;margin-top:8px">手続き中の契約が決済されれば <b style="font-size:20px">+' + usd2(s.wait) + '</b>（約' + yen(s.wait) + '）</div>' : '') +
-    '<div class="asof">コミッション計算と同じ決め方の目安です（サブスク未払いの人の分は、上のサブスク有効な人に移したあと）。会社（ABCD-1）の分は入れず、下に別に出しています。</div></div>';
+    '<div class="asof">コミッション計算と同じ決め方の目安です（サブスク未払いの人の分は、上のサブスク有効な人に移したあと）。会社（ABCD-1）の分は入れていません。</div></div>';
   // 代理店区分ごと
   var groups = {}, order = [];
   p.rows.forEach(function (r) { var k = payKubunOf(r); if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(r); });
@@ -1047,10 +1056,8 @@ document.getElementById('app').addEventListener('click', function (e) {
   var d = el.dataset;
   if (d.rwmonth) { S.rwMonth = Number(d.rwmonth); }
   else if (d.rwagent) { goPage('reward'); S.focus = d.rwagent; S.sel = { type: 'agent', id: d.rwagent }; } // 支払い見込みの一覧から、その人の報酬へ
-  else if (d.act === 'hideco') { // 隠す：読み込んだ分も捨てる（会社を本人として見る人は、自分の報酬として会社の分を残す）
-    S.showCo = false; D.payout = null;
-    if (!D.companyPerson) { delete D.rewards[COMPANY_CODE]; S.page = 'home'; }
-  }
+  else if (d.act === 'hideco') { D.payout = null; goPage('home'); S.focus = D.me; S.sel = { type: 'agent', id: D.me }; } // 閉じる：読み込んだ分も捨てる
+  else if (d.act === 'backco') { goPage('company'); S.focus = D.me; S.sel = { type: 'agent', id: D.me }; }
   else if (d.act === 'payall') S.payAll = !S.payAll;
   else if (d.paykubun) { S.payKubun = S.payKubun === d.paykubun ? '' : d.paykubun; S.payAll = false; } // もう一度押すと閉じる
   else if (d.page) { goPage(d.page); }
@@ -1085,7 +1092,7 @@ document.getElementById('app').addEventListener('click', function (e) {
   render();
   wrap = document.querySelector('.chartwrap');
   if (wrap) wrap.scrollLeft = sx;
-  if (d.go || d.page || d.rwagent || d.act === 'hideco') window.scrollTo(0, 0);
+  if (d.go || d.page || d.rwagent || d.act === 'hideco' || d.act === 'backco') window.scrollTo(0, 0);
   var pd = d.paykubun && document.getElementById('paydetail'); // 区分を押したら、その詳細へ
   if (pd) pd.scrollIntoView({ behavior: 'smooth', block: 'start' });
   var det = document.getElementById('detail');
