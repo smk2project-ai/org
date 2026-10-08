@@ -750,14 +750,14 @@ function payoutBlock(p, act) {
   var s = paySum(p.rows);
   var L1 = act ? '1年目' : '新規', L2 = act ? '2年目以降' : '継続', what = act ? 'お支払い（実績）' : 'お支払い見込み';
   var h = '<div class="panel rwcard hero"><div class="lvsub">代理店への' + what + '　' + esc(p.label) + (p.pay ? '（' + esc(p.pay) + 'お支払い予定）' : '') + '</div>' +
-    '<div class="big gold">' + usd2(s.paid) + '</div><div class="yen">約' + yen(s.paid) + '　' + s.n + '名' + (act ? '　' + p.count + '件' : '') + '</div>' +
+    '<div class="big gold">' + usd2(s.paid) + '</div><div class="yen">約' + yen(s.paid) + '　' + s.n + '名' + (act ? '　' + p.count + '件' + (p.from ? '　入金 ' + esc(p.from) + '〜' + esc(p.to) : '') : '') + '</div>' +
     '<div class="rwsplit"><div><span class="lbl">' + L1 + '</span><b>' + usd2(s.nw) + '</b></div>' +
     '<div><span class="lbl">' + L2 + '</span><b>' + usd2(s.cont) + '</b></div>' +
     '<div><span class="lbl">うちアドバイザー</span><b>' + usd2(s.adv) + '</b></div></div>' +
     (s.hold ? '<div class="lvneed" style="font-size:14px;margin-top:12px">うち保留（スタートアップ未参加） <b>' + usd2(s.hold) + '</b></div>' : '') +
     (s.wait ? '<div class="lvneed" style="font-size:14px;margin-top:8px">手続き中の契約が決済されれば <b style="font-size:20px">+' + usd2(s.wait) + '</b>（約' + yen(s.wait) + '）</div>' : '') +
     '<div class="asof">' + (act
-      ? 'ITA管理表「コミッション計算」の結果（ITAの明細の入金から計算したもの）を集計しています。会社（ABCD-1）の分、全体ボーナス・会社営業報酬は入っていません。1年目＝ステージ1。保留は今のスタートアップの登録で見ています。'
+      ? 'ITA管理表「コミッション計算」の結果（ITAの明細の入金から、最後にコミッション計算を実行した1回分）を集計しています。月ごとは入金（アクティビティ日）の月です。会社（ABCD-1）の分、全体ボーナス・会社営業報酬は入っていません。1年目＝ステージ1。保留は今のスタートアップの登録で見ています。'
       : 'メンバー覧から、お客様が予定どおり入金した場合の目安です（コミッション計算と同じ決め方。サブスク未払いの人の分は、上のサブスク有効な人に移したあと）。会社（ABCD-1）の分は入れていません。') + '</div></div>';
   // 代理店区分ごと
   var groups = {}, order = [];
