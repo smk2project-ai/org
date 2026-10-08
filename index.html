@@ -748,16 +748,17 @@ function paySum(rows) {
 function payKubunOf(r) { return r[8] || (/^[A-Z]+/.exec(r[0]) || [''])[0] || '—'; }
 function payoutBlock(p, act) {
   var s = paySum(p.rows);
-  var L1 = act ? '1年目' : '新規', L2 = act ? '2年目以降' : '継続', what = act ? 'お支払い（実績）' : 'お支払い見込み';
+  var L1 = '新規', L2 = '継続', what = act ? 'お支払い（実績）' : 'お支払い見込み';
   var h = '<div class="panel rwcard hero"><div class="lvsub">代理店への' + what + '　' + esc(p.label) + (p.pay ? '（' + esc(p.pay) + 'お支払い予定）' : '') + '</div>' +
-    '<div class="big gold">' + usd2(s.paid) + '</div><div class="yen">約' + yen(s.paid) + '　' + s.n + '名' + (act ? '　' + p.count + '件' + (p.from ? '　入金 ' + esc(p.from) + '〜' + esc(p.to) : '') : '') + '</div>' +
+    '<div class="big gold">' + usd2(s.paid) + '</div><div class="yen">約' + yen(s.paid) + '　' + s.n + '名' + (act ? '　' + p.count + '件' : '') + '</div>' +
     '<div class="rwsplit"><div><span class="lbl">' + L1 + '</span><b>' + usd2(s.nw) + '</b></div>' +
     '<div><span class="lbl">' + L2 + '</span><b>' + usd2(s.cont) + '</b></div>' +
     '<div><span class="lbl">うちアドバイザー</span><b>' + usd2(s.adv) + '</b></div></div>' +
     (s.hold ? '<div class="lvneed" style="font-size:14px;margin-top:12px">うち保留（スタートアップ未参加） <b>' + usd2(s.hold) + '</b></div>' : '') +
     (s.wait ? '<div class="lvneed" style="font-size:14px;margin-top:8px">手続き中の契約が決済されれば <b style="font-size:20px">+' + usd2(s.wait) + '</b>（約' + yen(s.wait) + '）</div>' : '') +
     '<div class="asof">' + (act
-      ? 'ITA管理表「コミッション計算」の結果（ITAの明細の入金から、最後にコミッション計算を実行した1回分）を集計しています。月ごとは入金（アクティビティ日）の月です。会社（ABCD-1）の分、全体ボーナス・会社営業報酬は入っていません。1年目＝ステージ1。保留は今のスタートアップの登録で見ています。'
+      ? 'ITA管理表「コミッション計算」（最後にコミッション計算を実行した実績月の分）を集計しています。' + actualRule(p.month) +
+        '新規・継続は「計算対象」の判定のとおりです。会社（ABCD-1）の分、全体ボーナス・会社営業報酬は入っていません。保留は今のスタートアップの登録で見ています。'
       : 'メンバー覧から、お客様が予定どおり入金した場合の目安です（コミッション計算と同じ決め方。サブスク未払いの人の分は、上のサブスク有効な人に移したあと）。会社（ABCD-1）の分は入れていません。') + '</div></div>';
   // 代理店区分ごと
   var groups = {}, order = [];
@@ -796,11 +797,20 @@ function payoutBlock(p, act) {
   if (rows.length > 30) h += '<button class="ghost" data-act="payall" style="margin-top:8px">' + (all ? '上位30名だけにする' : 'すべて見る（' + rows.length + '名）') + '</button>';
   return h + '</div>';
 }
-// 実績の明細（コミッション計算の行）：[契約者, 種類, ドル, ステージ, 商品（年）, 入金額, 取得％]
+// 実績月の決まり（例：2026年7月 → 新規は 7/1〜8/20 の決済、継続は 8月末（区分A・B・D・E）／8/15（ほか）までの入金）
+function actualRule(month) {
+  var m = /(\d{4})年(\d{1,2})月/.exec(month || '');
+  if (!m) return '';
+  var mo = Number(m[2]), nx = mo === 12 ? 1 : mo + 1;
+  return m[1] + '年' + mo + '月分＝新規は' + mo + '月かそれより前の申込で ' + mo + '/1〜' + nx + '/20 に決済されたもの、継続はまだ支払っていない入金のうち ' +
+    nx + '月末（区分A・B・D・E）／' + nx + '/15（ほか）までのもの（日付はステータス判定で入れた日）。';
+}
+// 実績の明細（コミッション計算の行）：[契約者, 種類, ドル, ステージ, 商品（年）, 入金額, 取得％, 新規/継続, 決済日]
 function payItems(items) {
-  return '<div style="overflow-x:auto;margin:-2px 0 8px"><table class="pay"><tr><th class="l">契約者</th><th class="l">種類</th><th>ステージ</th><th>入金額</th><th>％</th><th>報酬</th></tr>' +
+  return '<div style="overflow-x:auto;margin:-2px 0 8px"><table class="pay"><tr><th class="l">契約者</th><th class="l">種類</th><th class="l">新規/継続</th><th>決済日</th><th>ステージ</th><th>入金額</th><th>％</th><th>報酬</th></tr>' +
     items.slice().sort(function (a, b) { return b[2] - a[2]; }).map(function (x) {
-      return '<tr><td class="l">' + esc(x[0]) + '</td><td class="l">' + esc(x[1]) + '</td><td>' + (x[3] ? x[3] + '年目' : '') + (x[4] ? ' ・ ' + esc(x[4]) + '年' : '') + '</td>' +
+      return '<tr><td class="l">' + esc(x[0]) + '</td><td class="l">' + esc(x[1]) + '</td><td class="l">' + esc(x[7] || '') + '</td><td>' + esc(x[8] || '') + '</td>' +
+        '<td>' + (x[3] ? x[3] + '年目' : '') + (x[4] ? ' ・ ' + esc(x[4]) + '年' : '') + '</td>' +
         '<td>' + usd2(x[5]) + '</td><td>' + (Math.round((Number(x[6]) || 0) * 100) / 100) + '%</td><td><b>' + usd2(x[2]) + '</b></td></tr>';
     }).join('') + '</table></div>';
 }
