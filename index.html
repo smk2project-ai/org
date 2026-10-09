@@ -675,12 +675,15 @@ function postedText() {
   return 'ポイントは ' + y + '年' + mo + '月' + Number(m[3]) + '日の計上分（' + prev + '月分までの契約）まで入っています。次の計上は ' + next + '月21日の予定です。';
 }
 // 信託報酬オプションの権利（本人のホームだけ）。有効は初回の決済が確認できてから、日付は申込日
+function today() { var d = new Date(); return d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2); }
 function trustLine() {
   var t = D.trust;
   if (!t) return '';
   var h = '<div class="htrust">';
-  if (t.state === 'valid') h += '<span class="tb on">有効</span>' + esc(t.from || t.applied) + 'から<button class="tlink" data-act="trustoff">やめる</button>';
-  else if (t.state === 'applied') h += '<span class="tb wait">申込済み</span>' + esc(t.first) + 'の決済で有効<button class="tlink" data-act="trustoff">やめる</button>';
+  // 前払い：26日の決済はその翌月分。有効になる月（from）が来るまでは「決済済み」
+  if (t.state === 'valid') h += (t.from && today() < t.from ? '<span class="tb wait">決済済み</span>' + esc(t.fromMonth) + '分から有効' : '<span class="tb on">有効</span>' + esc(t.fromMonth) + '分から') +
+    '<button class="tlink" data-act="trustoff">やめる</button>';
+  else if (t.state === 'applied') h += '<span class="tb wait">申込済み</span>' + esc(t.first) + 'の決済で' + esc(t.firstMonth) + '分から有効<button class="tlink" data-act="trustoff">やめる</button>';
   else {
     h += '<span class="tb off">無効</span>' + (t.state === 'canceled' ? esc(t.canceled) + 'にやめました' : '');
     h += t.canApply ? '<button class="tbtn" data-act="trust">信託報酬オプションを申し込む</button>' : '<div>' + esc(t.reason) + '</div>';
@@ -706,18 +709,19 @@ function trustPage() {
     '<dl class="kv"><dt>払い方</dt><dd>' + esc(p.plan) + '</dd>' +
     '<dt>金額</dt><dd>' + Number(p.amount).toLocaleString('ja-JP') + '円' + (p.plan === '年払い' ? '／年' : '／月') + '（サブスクと一緒に26日に決済）</dd>' +
     '<dt>初回の決済</dt><dd>' + esc(p.first) + '</dd>' +
+    '<dt>有効になる月</dt><dd>' + esc(p.firstMonth) + '分から</dd>' +
     '<dt>今の信託報酬</dt><dd>Lv' + Math.min(lv, 7) + '　' + trustText(lv) + '</dd></dl>' +
-    '<p class="lvsub">初回の決済が確認できたら「有効」になります。初回の日に決済されたら今日の申込日から、初回が通らずあとの月に決済されたら、その決済日からの有効です。やめるときは、この画面からいつでもやめられます。</p>' +
+    '<p class="lvsub">お支払いは前払いです。26日の決済は翌月分で、初回の決済が確認できた翌月から「有効」になります（初回が通らなかったときは、決済できた月の翌月から）。やめるときは、この画面からいつでもやめられます。</p>' +
     '<div class="act"><button class="main" data-act="trustgo"' + (r.busy ? ' disabled' : '') + '>' + (r.busy ? '手続き中…' : '申し込む') + '</button>' + back + '</div></div>';
 }
 // 信託報酬のサーバー呼び出し（見本のときは、それらしい結果を返す）
 function trustCall(name, ok, ng) {
   if (!LIVE) {
-    var today = '2026/10/10';
+    var d0 = '2026/10/10';
     setTimeout(function () {
-      if (name === 'orgTrustPrepare') ok({ ok: true, plan: '月払い', amount: 1100, first: '2026/10/26' });
-      else if (name === 'orgTrustApply') ok({ ok: true, trust: { state: 'applied', applied: today, first: '2026/10/26', canApply: true } });
-      else ok({ ok: true, trust: { state: 'canceled', canceled: today, canApply: true } });
+      if (name === 'orgTrustPrepare') ok({ ok: true, plan: '月払い', amount: 1100, first: '2026/10/26', firstMonth: '2026年11月' });
+      else if (name === 'orgTrustApply') ok({ ok: true, trust: { state: 'applied', applied: d0, first: '2026/10/26', firstMonth: '2026年11月', canApply: true } });
+      else ok({ ok: true, trust: { state: 'canceled', canceled: d0, canApply: true } });
     }, 300);
     return;
   }
@@ -730,7 +734,7 @@ function trustRun(name) {
     else {
       D.trust = res.trust;
       S.tr = { mode: 'done', msg: name === 'orgTrustApply'
-        ? '申し込みました。' + (res.trust.first ? res.trust.first + 'の決済が確認できたら「有効」になります。' : '')
+        ? '申し込みました。' + (res.trust.first ? res.trust.first + 'の決済が確認できたら、' + res.trust.firstMonth + '分から「有効」になります。' : '')
         : 'やめました。信託報酬を受け取る権利は無効になりました。' };
     }
     render();
