@@ -1055,8 +1055,8 @@ function contractDetail(k) {
 }
 // 手続きの進み具合（契約者状況管理から）
 function stepsDetail(st) {
+  if (!st) return ''; // 記録が無い（契約者状況管理を読んでいないときも）は出さない
   var h = '<h3>手続きの進み具合</h3>';
-  if (!st) return h + '<p class="empty">まだ記録がありません。</p>';
   var done = function (b) { return b ? '<span class="badge ok">済み</span>' : '<span class="badge wait">まだ</span>'; };
   var state = function (v) {
     if (!v) return '<span class="badge wait">まだ</span>';
