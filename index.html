@@ -322,6 +322,10 @@ var LEVELS = [
   { lv: 2, pt: 6, direct: 0 }, { lv: 3, pt: 16, direct: 0 }, { lv: 4, pt: 31, direct: 10 },
   { lv: 5, pt: 61, direct: 12 }, { lv: 6, pt: 101, direct: 15 }, { lv: 7, pt: 201, direct: 20 }
 ];
+// レベルごとの信託報酬の率（Lv1 はなし、Lv2 から 0.05% ずつ）
+// 今後、信託報酬を受け取るにはサブスク追加（1,100円）が必要になる予定。徴収が始まったら、権利の有効・無効もここに並べて出す
+function trustRate(lv) { return lv >= 2 ? (Math.min(lv, 7) - 1) * 0.05 : 0; }
+function trustText(lv) { var r = trustRate(lv); return r ? r.toFixed(2) + '%' : 'なし'; }
 var TOKEN_KEY = 'mk2_org_token';
 var COMPANY_CODE = 'ABCD-1'; // 個人名を出さず「会社」と表示するコード（Code.gs の ORG_COMPANY と同じ）
 var IN_GAS = typeof google !== 'undefined' && google.script && google.script.run;
@@ -642,6 +646,7 @@ function goldHero(f) {
     var lv = parseInt(f.level, 10) || 1, nx = lv < 7 ? LEVELS[lv - 1] : null, from = lv >= 2 ? LEVELS[lv - 2].pt : 0;
     var rate = nx ? Math.max(0, Math.min(1, (f.pt - from) / (nx.pt - from))) : 1;
     h += '<div class="hbox" data-page="points"><div class="lbl">レベル</div><div class="lvnum gold">Lv' + lv + '</div>' +
+      '<div class="sub">信託報酬 <b class="gold">' + trustText(lv) + '</b>' + (nx ? '（Lv' + nx.lv + 'で' + trustText(nx.lv) + '）' : '') + '</div>' +
       '<div class="sub">' + (nx ? 'Lv' + nx.lv + 'まで あと ' + pt(Math.max(0, nx.pt - f.pt)) + 'P' + (nx.direct > f.direct ? '（直紹介 あと ' + pt(nx.direct - f.direct) + 'P）' : '') : 'いちばん上のレベル') + '</div>' +
       '<div class="gbar"><i style="width:' + Math.round(rate * 100) + '%"></i></div>' +
       '<div class="glad">' + [1, 2, 3, 4, 5, 6, 7].map(function (n) { return '<span class="' + (n === lv ? 'now' : n < lv ? 'done' : '') + '">' + n + '</span>'; }).join('') + '</div></div>';
