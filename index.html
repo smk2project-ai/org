@@ -189,7 +189,8 @@
   /* ログイン */
   .login { max-width: 420px; margin: 40px auto; }
   .login label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
-  .login .act { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .login .act, .panel .act { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .panel p.err { color: var(--red); }
   .login .err { color: var(--red); margin-top: 10px; min-height: 1.6em; }
 
   /* 下のタブ（PCでは上に横ならび） */
@@ -232,6 +233,13 @@
   .hnext { margin-top: 10px; width: 100%; text-align: left; border: 1px solid rgba(212, 175, 55, .35); border-radius: 10px; background: rgba(255, 255, 255, .04);
     color: #cdb983; font-size: 13px; padding: 7px 12px; }
   .hnext:hover { background: rgba(212, 175, 55, .1); }
+  .htrust { margin-top: 4px; font-size: 12px; color: #b9aa83; }
+  .tb { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 0 8px; margin-right: 4px; }
+  .tb.on { background: rgba(80, 200, 120, .18); color: #7fe0a0; }
+  .tb.off { background: rgba(255, 255, 255, .08); color: #a99d7f; }
+  .tb.wait { background: rgba(212, 175, 55, .2); color: #ecc65c; }
+  .tbtn { display: block; margin-top: 6px; width: 100%; font-size: 12px; padding: 6px 8px; border-radius: 8px; border: 0; background: linear-gradient(180deg, #f6e08f, #c4952f); color: #1b1407; font-weight: 800; }
+  .tlink { background: none; border: 0; color: #cdb983; text-decoration: underline; font-size: 11px; padding: 0; margin-left: 4px; }
   .hnext b { font-size: 15px; font-variant-numeric: tabular-nums; }
   .hrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 10px; margin-top: 12px; }
   .hbox { background: rgba(255, 255, 255, .04); border: 1px solid rgba(212, 175, 55, .28); border-radius: 12px; padding: 10px 12px; min-width: 0; }
@@ -337,6 +345,7 @@ var LIVE = IN_GAS || USE_API;
 /* ================= 見本データ（GAS の外で開いたときだけ使う） ================= */
 var SAMPLE = {
   me: 'Z-001', asOf: '2026/10/03 09:00', codes: ['Z-001'], postedUntil: '2026/09/21',
+  trust: { state: 'none', canApply: true },
   agents: [
     { code: 'Z-001', name: '山田 太郎', parent: '', level: '4', pt: 38.5, direct: 11, subsc: true },
     { code: 'Z-002', name: '佐藤 花子', parent: 'Z-001', level: '3', pt: 18, direct: 6, subsc: true },
@@ -596,6 +605,7 @@ function render() {
   else if (S.page === 'points') h += pointsPage(f);
   else if (S.page === 'reward') h += rewardPage(f);
   else if (S.page === 'company') h += companyPage();
+  else if (S.page === 'trust') h += trustPage();
   else {
     if (D.company && S.page === 'org') h += kubunBar();
     h += '<div class="tools"><input type="search" id="q" placeholder="' + (S.page === 'org' ? '名前・代理店コードで検索' : '契約者・紹介者で検索') + '" value="' + esc(S.q) + '"></div>';
@@ -647,6 +657,7 @@ function goldHero(f) {
     var rate = nx ? Math.max(0, Math.min(1, (f.pt - from) / (nx.pt - from))) : 1;
     h += '<div class="hbox" data-page="points"><div class="lbl">レベル</div><div class="lvnum gold">Lv' + lv + '</div>' +
       '<div class="sub">信託報酬 <b class="gold">' + trustText(lv) + '</b>' + (nx ? '（Lv' + nx.lv + 'で' + trustText(nx.lv) + '）' : '') + '</div>' +
+      (f.code === D.me ? trustLine() : '') +
       '<div class="sub">' + (nx ? 'Lv' + nx.lv + 'まで あと ' + pt(Math.max(0, nx.pt - f.pt)) + 'P' + (nx.direct > f.direct ? '（直紹介 あと ' + pt(nx.direct - f.direct) + 'P）' : '') : 'いちばん上のレベル') + '</div>' +
       '<div class="gbar"><i style="width:' + Math.round(rate * 100) + '%"></i></div>' +
       '<div class="glad">' + [1, 2, 3, 4, 5, 6, 7].map(function (n) { return '<span class="' + (n === lv ? 'now' : n < lv ? 'done' : '') + '">' + n + '</span>'; }).join('') + '</div></div>';
@@ -661,6 +672,68 @@ function postedText() {
   if (!m) return 'ポイントは毎月21日に計上します。';
   var y = Number(m[1]), mo = Number(m[2]), prev = mo === 1 ? 12 : mo - 1, next = mo === 12 ? 1 : mo + 1;
   return 'ポイントは ' + y + '年' + mo + '月' + Number(m[3]) + '日の計上分（' + prev + '月分までの契約）まで入っています。次の計上は ' + next + '月21日の予定です。';
+}
+// 信託報酬オプションの権利（本人のホームだけ）。有効は初回の決済が確認できてから、日付は申込日
+function trustLine() {
+  var t = D.trust;
+  if (!t) return '';
+  var h = '<div class="htrust">';
+  if (t.state === 'valid') h += '<span class="tb on">有効</span>' + esc(t.from || t.applied) + 'から<button class="tlink" data-act="trustoff">やめる</button>';
+  else if (t.state === 'applied') h += '<span class="tb wait">申込済み</span>' + esc(t.first) + 'の決済で有効<button class="tlink" data-act="trustoff">やめる</button>';
+  else {
+    h += '<span class="tb off">無効</span>' + (t.state === 'canceled' ? esc(t.canceled) + 'にやめました' : '');
+    h += t.canApply ? '<button class="tbtn" data-act="trust">信託報酬オプションを申し込む</button>' : '<div>' + esc(t.reason) + '</div>';
+  }
+  return h + '</div>';
+}
+// 信託報酬オプションの申し込み・やめる画面（S.tr：mode＝apply／cancel／done）
+function trustPage() {
+  var r = S.tr || {}, lv = parseInt(byCode[D.me].level, 10) || 1;
+  var h = '<div class="panel" style="max-width:560px">';
+  var back = '<button class="ghost" data-act="trustback">戻る</button>';
+  if (r.mode === 'done') return h + '<h2>信託報酬オプション</h2><p>' + esc(r.msg) + '</p><div class="act"><button class="main" data-act="trustback">ホームへ</button></div></div>';
+  if (r.err) return h + '<h2>信託報酬オプション</h2><p class="err">' + esc(r.err) + '</p><div class="act">' + back + '</div></div>';
+  if (r.mode === 'cancel') {
+    return h + '<h2>信託報酬オプションをやめる</h2>' +
+      '<p>やめると、信託報酬を受け取る権利は無効になります。もう一度申し込むこともできます。</p>' +
+      '<p class="lvsub">毎月13日から25日のあいだにやめた場合、その月26日の決済は止まりません（会費ペイの決まり）。</p>' +
+      '<div class="act"><button class="main" data-act="truststop"' + (r.busy ? ' disabled' : '') + '>' + (r.busy ? '手続き中…' : 'やめる') + '</button>' + back + '</div></div>';
+  }
+  if (r.loading || !r.prep) return h + '<h2>信託報酬オプションの申し込み</h2><p class="empty">確認中…</p></div>';
+  var p = r.prep;
+  return h + '<h2>信託報酬オプションの申し込み</h2>' +
+    '<dl class="kv"><dt>払い方</dt><dd>' + esc(p.plan) + '</dd>' +
+    '<dt>金額</dt><dd>' + Number(p.amount).toLocaleString('ja-JP') + '円' + (p.plan === '年払い' ? '／年' : '／月') + '（サブスクと一緒に26日に決済）</dd>' +
+    '<dt>初回の決済</dt><dd>' + esc(p.first) + '</dd>' +
+    '<dt>今の信託報酬</dt><dd>Lv' + Math.min(lv, 7) + '　' + trustText(lv) + '</dd></dl>' +
+    '<p class="lvsub">初回の決済が確認できたら「有効」になります。初回の日に決済されたら今日の申込日から、初回が通らずあとの月に決済されたら、その決済日からの有効です。やめるときは、この画面からいつでもやめられます。</p>' +
+    '<div class="act"><button class="main" data-act="trustgo"' + (r.busy ? ' disabled' : '') + '>' + (r.busy ? '手続き中…' : '申し込む') + '</button>' + back + '</div></div>';
+}
+// 信託報酬のサーバー呼び出し（見本のときは、それらしい結果を返す）
+function trustCall(name, ok, ng) {
+  if (!LIVE) {
+    var today = '2026/10/10';
+    setTimeout(function () {
+      if (name === 'orgTrustPrepare') ok({ ok: true, plan: '月払い', amount: 1100, first: '2026/10/26' });
+      else if (name === 'orgTrustApply') ok({ ok: true, trust: { state: 'applied', applied: today, first: '2026/10/26', canApply: true } });
+      else ok({ ok: true, trust: { state: 'canceled', canceled: today, canApply: true } });
+    }, 300);
+    return;
+  }
+  call(name, [getToken(), D.me], ok, function (m) { ng(m); });
+}
+function trustRun(name) {
+  trustCall(name, function (res) {
+    if (!res || !res.ok) { S.tr = { mode: S.tr.mode, err: (res && res.message) || 'うまくいきませんでした。' }; render(); return; }
+    if (name === 'orgTrustPrepare') S.tr = { mode: 'apply', prep: res };
+    else {
+      D.trust = res.trust;
+      S.tr = { mode: 'done', msg: name === 'orgTrustApply'
+        ? '申し込みました。' + (res.trust.first ? res.trust.first + 'の決済が確認できたら「有効」になります。' : '')
+        : 'やめました。信託報酬を受け取る権利は無効になりました。' };
+    }
+    render();
+  }, function (m) { S.tr = { mode: S.tr.mode, err: m }; render(); });
 }
 // 見込み報酬：代理店は自分の分だけ（会社用は全員）
 function rewardOf(code) { return (D.rewards || {})[code] || null; }
@@ -1121,11 +1194,16 @@ document.getElementById('app').addEventListener('click', function (e) {
   else if (d.act === 'closeall') { S.open = {}; S.open[S.focus] = true; }
   else if (d.act === 'allmonth') S.month = '';
   else if (d.act === 'hist') S.histAll = S.histAll === S.sel.id ? '' : S.sel.id;
+  else if (d.act === 'trust') { S.page = 'trust'; S.tr = { mode: 'apply', loading: true }; trustRun('orgTrustPrepare'); }
+  else if (d.act === 'trustoff') { S.page = 'trust'; S.tr = { mode: 'cancel' }; }
+  else if (d.act === 'trustgo' && !S.tr.busy) { S.tr.busy = true; trustRun('orgTrustApply'); }
+  else if (d.act === 'truststop' && !S.tr.busy) { S.tr.busy = true; trustRun('orgTrustCancel'); }
+  else if (d.act === 'trustback') { goPage('home'); S.tr = null; }
   var wrap = document.querySelector('.chartwrap'), sx = wrap ? wrap.scrollLeft : 0;
   render();
   wrap = document.querySelector('.chartwrap');
   if (wrap) wrap.scrollLeft = sx;
-  if (d.go || d.page || d.rwagent || d.act === 'hideco' || d.act === 'backco') window.scrollTo(0, 0);
+  if (d.go || d.page || d.rwagent || d.act === 'hideco' || d.act === 'backco' || /^trust(off|back)?$/.test(d.act || '')) window.scrollTo(0, 0);
   var pd = d.paykubun && document.getElementById('paydetail'); // 区分を押したら、その詳細へ
   if (pd) pd.scrollIntoView({ behavior: 'smooth', block: 'start' });
   var det = document.getElementById('detail');
