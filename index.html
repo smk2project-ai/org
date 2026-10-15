@@ -179,6 +179,15 @@
   table.hist .p { color: var(--orange); font-weight: 700; }
   table.hist small { display: block; color: var(--muted); font-weight: 400; }
   table.hist small.cp { font-size: 12px; margin-top: 2px; }
+  table.hist .hopen { margin-top: 6px; }
+  .hitems { margin-top: 6px; border-left: 2px solid var(--line); padding-left: 8px; }
+  .hitems .hi { padding: 5px 0; border-bottom: 1px dashed var(--line); font-size: 12px; }
+  .hitems .hi:last-child { border-bottom: 0; }
+  .hitems .top { display: flex; justify-content: space-between; gap: 8px; }
+  .hitems .top b { color: var(--navy); white-space: nowrap; }
+  .hitems .who { color: var(--muted); }
+  .hitems .how { color: var(--muted); }
+  .hitems .how.cpn { color: var(--orange); font-weight: 700; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border-bottom: 1px solid #e3e9f2; padding: 7px 8px; text-align: right; font-variant-numeric: tabular-nums; }
   th { color: var(--muted); font-size: 12px; font-weight: 600; }
@@ -394,7 +403,8 @@ var SAMPLE = {
       ] }
     ] }
   },
-  // ポイント履歴：[日付, 内容, ポイント, 直紹介ポイント, 累積, 内訳（キャンペーンで倍になった分。改行区切り）]（古い順）
+  // ポイント履歴：[日付, 内容, ポイント, 直紹介ポイント, 累積, 内訳（キャンペーンで倍になった分。改行区切り）,
+  //   契約ごと（改行区切り。1行＝契約者・紹介・ポイント・倍率の説明 のタブ区切り）]（古い順）
   history: {
     'Z-001': [
       ['2025/07/25', 'それまでの累計', 8, 0, 8],
@@ -405,7 +415,8 @@ var SAMPLE = {
       ['2026/06/19', '契約のポイント（2026年6月の明細）', 6, 3, 32.5],
       ['2026/08/18', '契約のポイント（2026年8月の明細）', 2.5, 0, 35],
       ['2026/09/21', '契約のポイント（2026/09/21 計上分）', 3.5, 1.5, 38.5,
-        '7月3倍キャンペーン（2026/7/1〜7/31） 1件：基本 0.5P × 3倍 ＝ 1.5P\n8月2倍キャンペーン（2026/8/1〜8/31） 1件：基本 0.75P × 2倍 ＝ 1.5P\n通常 1件：0.5P']
+        '7月3倍キャンペーン（2026/7/1〜7/31） 1件：基本 0.5P × 3倍 ＝ 1.5P\n8月2倍キャンペーン（2026/8/1〜8/31） 1件：基本 0.75P × 2倍 ＝ 1.5P\n通常 1件：0.5P',
+        '見本 二郎\t直紹介\t1.5\t7月3倍キャンペーン：基本 0.5P × 3倍\n見本 三奈\t紹介 佐藤 花子\t1.5\t8月2倍キャンペーン：基本 0.75P × 2倍\n見本 一子\t直紹介\t0.5\t通常']
     ],
     'Z-002': [
       ['2026/02/25', '契約のポイント（2026年2月の明細）', 15, 5, 15],
@@ -1154,10 +1165,12 @@ function historyTable(code, limit) {
   var h = '<h3>ポイントの履歴</h3>';
   if (!rows.length) return h + '<p class="empty">まだありません。</p>';
   var all = !limit || S.histAll === code, show = all ? rows : rows.slice(0, limit);
+  S.histOpen = S.histOpen || {};
   h += '<table class="hist"><tr><th>日付</th><th>内容</th><th class="n">ポイント</th><th class="n">累積</th></tr>' +
-    show.map(function (r) {
+    show.map(function (r, i) {
       return '<tr><td class="d">' + esc(r[0]) + '</td><td>' + esc(r[1]) +
-        (r[5] ? String(r[5]).split('\n').map(function (s) { return '<small class="cp">' + esc(s) + '</small>'; }).join('') : '') + '</td>' +
+        (r[5] ? String(r[5]).split('\n').map(function (s) { return '<small class="cp">' + esc(s) + '</small>'; }).join('') : '') +
+        histItems(code + '|' + i, r[6]) + '</td>' +
         '<td class="n">' + (!r[2] && r[3]
           ? '<span class="p">直紹介 ' + (r[3] < 0 ? '' : '+') + pt(r[3]) + 'P</span>' // 直紹介ポイントだけの行
           : '<span class="p">' + (r[2] < 0 ? '' : '+') + pt(r[2]) + 'P</span>' + (r[3] ? '<small>うち直紹介 ' + pt(r[3]) + 'P</small>' : '')) + '</td>' +
@@ -1165,6 +1178,18 @@ function historyTable(code, limit) {
     }).join('') + '</table>';
   if (limit && rows.length > limit) h += '<button class="ghost" data-act="hist">' + (all ? '新しい5件だけにする' : 'すべて見る（' + rows.length + '件）') + '</button>';
   return h;
+}
+// 計上に入った契約の一覧（押すと開く）。行：契約者\t紹介\tポイント\t倍率の説明
+function histItems(key, text) {
+  if (!text) return '';
+  var lines = String(text).split('\n'), open = S.histOpen[key];
+  var h = '<div class="hopen"><button class="mini ghost" data-histd="' + esc(key) + '">' + (open ? '閉じる' : '契約ごとに見る（' + lines.length + '件）') + '</button></div>';
+  if (!open) return h;
+  return h + '<div class="hitems">' + lines.map(function (l) {
+    var x = l.split('\t');
+    return '<div class="hi"><div class="top"><span>' + esc(x[0]) + (x[1] ? ' <span class="who">' + esc(x[1]) + '</span>' : '') + '</span>' +
+      '<b>+' + pt(x[2]) + 'P</b></div><div class="how' + (x[3] && x[3] !== '通常' ? ' cpn' : '') + '">' + esc(x[3] || '') + '</div></div>';
+  }).join('') + '</div>';
 }
 function contractDetail(k) {
   var who = byCode[k.intro], adv = byCode[k.adv];
@@ -1205,10 +1230,11 @@ function stepsDetail(st) {
 
 /* ================= 操作 ================= */
 document.getElementById('app').addEventListener('click', function (e) {
-  var el = e.target.closest('[data-rwmonth],[data-rwagent],[data-paykubun],[data-paymode],[data-paymonth],[data-payagent],[data-page],[data-tab],[data-tog],[data-agent],[data-contract],[data-focus],[data-act],[data-month],[data-view],[data-zoom],[data-kubun],[data-go]');
+  var el = e.target.closest('[data-histd],[data-rwmonth],[data-rwagent],[data-paykubun],[data-paymode],[data-paymonth],[data-payagent],[data-page],[data-tab],[data-tog],[data-agent],[data-contract],[data-focus],[data-act],[data-month],[data-view],[data-zoom],[data-kubun],[data-go]');
   if (!el || !D) return;
   var d = el.dataset;
-  if (d.rwmonth) { S.rwMonth = Number(d.rwmonth); }
+  if (d.histd) { S.histOpen = S.histOpen || {}; S.histOpen[d.histd] = !S.histOpen[d.histd]; }
+  else if (d.rwmonth) { S.rwMonth = Number(d.rwmonth); }
   else if (d.rwagent) { goPage('reward'); S.focus = d.rwagent; S.sel = { type: 'agent', id: d.rwagent }; } // 支払い見込みの一覧から、その人の報酬へ
   else if (d.act === 'hideco') { D.payout = null; D.actual = null; goPage('home'); S.focus = D.me; S.sel = { type: 'agent', id: D.me }; } // 閉じる：読み込んだ分も捨てる
   else if (d.act === 'backco') { goPage('company'); S.focus = D.me; S.sel = { type: 'agent', id: D.me }; }
