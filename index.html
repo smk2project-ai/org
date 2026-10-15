@@ -178,6 +178,7 @@
   table.hist .n { width: 1%; text-align: right; white-space: nowrap; }
   table.hist .p { color: var(--orange); font-weight: 700; }
   table.hist small { display: block; color: var(--muted); font-weight: 400; }
+  table.hist small.cp { font-size: 12px; margin-top: 2px; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border-bottom: 1px solid #e3e9f2; padding: 7px 8px; text-align: right; font-variant-numeric: tabular-nums; }
   th { color: var(--muted); font-size: 12px; font-weight: 600; }
@@ -393,7 +394,7 @@ var SAMPLE = {
       ] }
     ] }
   },
-  // ポイント履歴：[日付, 内容, ポイント, 直紹介ポイント, 累積]（古い順）
+  // ポイント履歴：[日付, 内容, ポイント, 直紹介ポイント, 累積, 内訳（キャンペーンで倍になった分。改行区切り）]（古い順）
   history: {
     'Z-001': [
       ['2025/07/25', 'それまでの累計', 8, 0, 8],
@@ -403,7 +404,8 @@ var SAMPLE = {
       ['2026/04/27', '契約のポイント（2026年4月の明細）', 12.5, 4, 26.5],
       ['2026/06/19', '契約のポイント（2026年6月の明細）', 6, 3, 32.5],
       ['2026/08/18', '契約のポイント（2026年8月の明細）', 2.5, 0, 35],
-      ['2026/09/21', '契約のポイント（2026/09/21 計上分）', 3.5, 1.5, 38.5]
+      ['2026/09/21', '契約のポイント（2026/09/21 計上分）', 3.5, 1.5, 38.5,
+        '7月3倍キャンペーン（2026/7/1〜7/31） 1件：基本 0.5P × 3倍 ＝ 1.5P\n8月2倍キャンペーン（2026/8/1〜8/31） 1件：基本 0.75P × 2倍 ＝ 1.5P\n通常 1件：0.5P']
     ],
     'Z-002': [
       ['2026/02/25', '契約のポイント（2026年2月の明細）', 15, 5, 15],
@@ -599,7 +601,7 @@ function render() {
   var cons = contractsOf(scope);
   var h = navBar();
   if (S.focus !== D.me) { // ほかの人から下を見ているときだけ出す
-    h += '<div class="focus"><span>表示中： <b>' + esc(label(f.code)) + '</b> から下</span>' +
+    h += '<div class="focus"><span>表示中： <b>' + esc(label(f.code)) + '</b> ' + (D.company ? 'の画面（代理店から見えるのと同じ）' : 'から下') + '</span>' +
       '<button class="mini" data-act="home">' + (D.company ? '会社全体に戻す' : '自分に戻す') + '</button></div>';
   }
   if (S.page === 'home') h += homePage(f, down, cons);
@@ -756,6 +758,7 @@ function monthSum(mo) {
 }
 function rewardPage(f) {
   var rw = rewardOf(f.code), mine = f.code === D.me;
+  if (D.company && f.code === D.me && (S.rwList || !rw)) return rewardListPage();
   if (!rw) {
     return '<div class="panel"><h2>報酬</h2><p class="empty">' + (f.code === COMPANY_CODE ? '会社の分は出していません。' : '報酬は、ご自身の分だけ表示します。') + '</p>' +
       (rewardOf(D.me) ? '<button data-act="home">自分の報酬を見る</button>' : '') + '</div>';
@@ -774,6 +777,8 @@ function rewardPage(f) {
     return '<button data-rwmonth="' + i + '" class="' + (i === mi ? 'on' : '') + '">' + esc(m.label) + '</button>';
   }).join('') + '</div>';
   if (D.payout && f.code !== D.me) h += '<div style="margin:-4px 0 8px"><button class="mini ghost" data-act="backco">‹ 会社の支払い見込みに戻る</button></div>';
+  else if (D.company && f.code !== D.me) h += '<div style="margin:-4px 0 8px"><button class="mini ghost" data-act="rwlist">‹ 代理店ごとの一覧に戻る</button></div>';
+  else if (D.company) h += '<div style="margin:-4px 0 8px"><button class="mini ghost" data-act="rwlist">代理店ごとの見込み報酬を見る ›</button></div>';
   h += '<div class="panel rwcard hero"><div class="lvsub">' + (mine ? '' : esc(f.name) + 'さんの') + esc(mo.label) + 'の見込み報酬（' + esc(mo.pay) + 'お支払い予定）</div>' +
     '<div class="big gold">' + usd2(rw.subsc ? sm.total : 0) + '</div><div class="yen">約' + yen(rw.subsc ? sm.total : 0) + '</div>' +
     '<div class="rwsplit"><div><span class="lbl">新規</span><b>' + usd2(sm.new) + '</b></div>' +
@@ -801,6 +806,44 @@ function rewardPage(f) {
       '<div class="panel">' + rewardBasis(mineItems, f, mo) + '</div></div>';
   }
   return h;
+}
+// 会社用：代理店ごとの見込み報酬の一覧（多い順）。押すとその人の報酬のページ（代理店から見えるのと同じ）
+function rewardListData() {
+  var codes = Object.keys(D.rewards || {}).filter(function (c) { return c !== COMPANY_CODE && byCode[c]; });
+  var any = codes.length ? D.rewards[codes[0]] : null;
+  if (!any) return null;
+  var mi = Math.min(S.rwMonth || 0, any.months.length - 1);
+  var rows = codes.map(function (c) {
+    var rw = D.rewards[c], sm = monthSum(rw.months[mi]);
+    return { code: c, subsc: rw.subsc, startup: rw.startup, total: rw.subsc ? sm.total : 0, wait: rw.subsc ? sm.wait : 0 };
+  }).filter(function (r) { return r.total || r.wait; });
+  return { months: any.months, mi: mi, rows: rows };
+}
+function rewardListRows(rows) {
+  var q = String(S.rwq || '').toLowerCase();
+  var show = rows.filter(function (r) { return !q || r.code.toLowerCase().indexOf(q) !== -1 || String(byCode[r.code].name).toLowerCase().indexOf(q) !== -1; })
+    .sort(function (a, b) { return b.total - a.total || b.wait - a.wait || a.code.localeCompare(b.code); });
+  if (!show.length) return '<p class="empty">見つかりませんでした。</p>';
+  return '<div class="list">' + show.map(function (r) {
+    return '<button class="row" data-rwagent="' + esc(r.code) + '"><span class="left"><span class="nm">' + esc(byCode[r.code].name) + '</span>' +
+      '<span class="meta">' + esc(r.code) + (r.startup ? '' : ' ・ スタートアップ未参加（保留）') + '</span></span>' +
+      '<span class="right">' + (r.wait ? '<span class="badge wait">決済されれば +' + usd2(r.wait) + '</span><br>' : '') +
+      '<b style="color:var(--navy);font-size:14px">' + usd2(r.total) + '</b></span></button>';
+  }).join('') + '</div>';
+}
+function rewardListPage() {
+  var x = rewardListData();
+  if (!x) return '<div class="panel"><h2>報酬</h2><p class="empty">見込み報酬のある代理店がいません。</p></div>';
+  var rows = x.rows, mi = x.mi, mo = x.months[mi], any = { months: x.months };
+  var sum = rows.reduce(function (n, r) { return n + r.total; }, 0);
+  var h = rewardOf(D.me) ? '<div style="margin:-4px 0 8px"><button class="mini ghost" data-act="rwmine">‹ ' + esc(nameOf(D.me)) + 'さんの報酬に戻る</button></div>' : '';
+  h += '<div class="seg" style="margin-bottom:10px">' + any.months.map(function (m, i) {
+    return '<button data-rwmonth="' + i + '" class="' + (i === mi ? 'on' : '') + '">' + esc(m.label) + '</button>';
+  }).join('') + '</div>';
+  h += '<div class="panel"><h2>代理店ごとの見込み報酬 <small>' + esc(mo.label) + '（' + esc(mo.pay) + 'お支払い予定）・' + rows.length + '名・合計 ' + usd2(sum) + '</small></h2>' +
+    '<p class="muted" style="margin:0 0 8px;font-size:12px">押すと、その代理店から見えるのと同じ報酬のページを開きます。</p>' +
+    '<div class="tools"><input type="search" id="rwq" placeholder="名前・代理店コードで検索" value="' + esc(S.rwq || '') + '"></div>';
+  return h + '<div id="rwlist">' + rewardListRows(rows) + '</div></div>';
 }
 // 会社が代理店に支払う見込み（D.payout の rows：[コード, 名前, 決済済み, 新規, 継続, うちアドバイザー, 手続き中, スタートアップ参加, 代理店区分, うち紹介, うち差額]）
 // 隠しページ（会社用）：会社が代理店に支払う分。メニューには出さず、見出しの「◯時点」→ 確認 のあとだけ開く
@@ -1095,6 +1138,8 @@ function agentDetail(a) {
       '<div class="bar"><i style="width:' + Math.round(nx.rate * 100) + '%"></i></div></div>';
   }
   if (a.code !== S.focus && down.length) h += '<button class="main" data-focus="' + esc(a.code) + '">この人から下を見る</button>';
+  // 会社用：その代理店がログインしたときと同じ画面（ホームの見込み報酬・報酬・ポイント）に切り替える
+  if (D.company && a.code !== S.focus && !coHidden(a.code)) h += ' <button class="main ghost" data-act="asagent" data-code="' + esc(a.code) + '">この代理店の画面で見る</button>';
   h += historyBlock(a.code);
   // 見出しの主語：会社は「会社が」、ログインした本人は「あなたが」、ほかの人は「◯◯さんが」
   var subject = coHidden(a.code) ? '会社' : (a.code === D.me ? 'あなた' : a.name + 'さん');
@@ -1111,7 +1156,8 @@ function historyTable(code, limit) {
   var all = !limit || S.histAll === code, show = all ? rows : rows.slice(0, limit);
   h += '<table class="hist"><tr><th>日付</th><th>内容</th><th class="n">ポイント</th><th class="n">累積</th></tr>' +
     show.map(function (r) {
-      return '<tr><td class="d">' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td>' +
+      return '<tr><td class="d">' + esc(r[0]) + '</td><td>' + esc(r[1]) +
+        (r[5] ? String(r[5]).split('\n').map(function (s) { return '<small class="cp">' + esc(s) + '</small>'; }).join('') : '') + '</td>' +
         '<td class="n">' + (!r[2] && r[3]
           ? '<span class="p">直紹介 ' + (r[3] < 0 ? '' : '+') + pt(r[3]) + 'P</span>' // 直紹介ポイントだけの行
           : '<span class="p">' + (r[2] < 0 ? '' : '+') + pt(r[2]) + 'P</span>' + (r[3] ? '<small>うち直紹介 ' + pt(r[3]) + 'P</small>' : '')) + '</td>' +
@@ -1195,6 +1241,11 @@ document.getElementById('app').addEventListener('click', function (e) {
     S.tab = d.go; S.month = '';
   }
   else if (d.act === 'home') { S.kubun = ''; S.focus = D.me; S.sel = { type: 'agent', id: D.me }; }
+  else if (d.act === 'rwlist') { goPage('reward'); S.rwList = true; S.kubun = ''; S.focus = D.me; S.sel = { type: 'agent', id: D.me }; }
+  else if (d.act === 'rwmine') S.rwList = false;
+  else if (d.act === 'asagent' && byCode[d.code]) { // 会社用：その代理店の画面（ホームから）
+    goPage('home'); S.kubun = ''; S.focus = d.code; S.open[d.code] = true; S.sel = { type: 'agent', id: d.code };
+  }
   else if (d.act === 'openall') [S.focus].concat(under(S.focus)).forEach(function (c) { S.open[c] = true; });
   else if (d.act === 'closeall') { S.open = {}; S.open[S.focus] = true; }
   else if (d.act === 'allmonth') S.month = '';
@@ -1208,7 +1259,7 @@ document.getElementById('app').addEventListener('click', function (e) {
   render();
   wrap = document.querySelector('.chartwrap');
   if (wrap) wrap.scrollLeft = sx;
-  if (d.go || d.page || d.rwagent || d.act === 'hideco' || d.act === 'backco' || /^trust(off|back)?$/.test(d.act || '')) window.scrollTo(0, 0);
+  if (d.go || d.page || d.rwagent || /^(asagent|rwlist|rwmine)$/.test(d.act || '') || d.act === 'hideco' || d.act === 'backco' || /^trust(off|back)?$/.test(d.act || '')) window.scrollTo(0, 0);
   var pd = d.paykubun && document.getElementById('paydetail'); // 区分を押したら、その詳細へ
   if (pd) pd.scrollIntoView({ behavior: 'smooth', block: 'start' });
   var det = document.getElementById('detail');
@@ -1261,12 +1312,18 @@ var ZOOM_MIN = 0.3, ZOOM_MAX = 2;
   }, { passive: false });
 })();
 function goPage(p) {
-  S.page = p; S.q = ''; S.month = '';
+  S.page = p; S.q = ''; S.month = ''; S.rwList = false;
   if (p === 'reward' && S.sel && S.sel.type === 'contract') { S.sel = null; S.back = null; } // 報酬のページは契約を押したときだけ詳細を出す
   if (PAGE_TABS[p] && PAGE_TABS[p].indexOf(S.tab) === -1) S.tab = PAGE_TABS[p][0];
 }
 // 検索：入力欄は作り直さず、左の一覧だけ書き直す（日本語の変換中は待つ）
 function onSearch(e) {
+  if (e.target.id === 'rwq' && !e.isComposing) { // 会社用の報酬一覧の検索
+    S.rwq = e.target.value.trim();
+    var x = rewardListData(), box = document.getElementById('rwlist');
+    if (x && box) box.innerHTML = rewardListRows(x.rows);
+    return;
+  }
   if (e.target.id !== 'q' || e.isComposing) return;
   S.q = e.target.value.trim();
   if (!document.getElementById('left')) return;
