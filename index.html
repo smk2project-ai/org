@@ -689,10 +689,13 @@ function postedText() {
 }
 // 信託報酬オプションの権利（本人のホームだけ）。有効は初回の決済が確認できてから、日付は申込日
 function today() { var d = new Date(); return d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2); }
+// 信託報酬の受け取りの準備ができるまでは「準備中」だけ出す（申込・やめるのボタンも出さない）。準備ができたら true に（Trust.js の ORG_TRUST.READY も）
+var TRUST_READY = false;
 function trustLine() {
   var t = D.trust;
   if (!t) return '';
   var h = '<div class="htrust">';
+  if (!TRUST_READY) return h + '<span class="tb wait">準備中</span>信託報酬オプションの申込は準備中です</div>';
   // 前払い：26日の決済はその翌月分。有効になる月（from）が来るまでは「決済済み」
   if (t.state === 'valid') h += (t.from && today() < t.from ? '<span class="tb wait">決済済み</span>' + esc(t.fromMonth) + '分から有効' : '<span class="tb on">有効</span>' + esc(t.fromMonth) + '分から') +
     '<button class="tlink" data-act="trustoff">やめる</button>';
@@ -1276,6 +1279,7 @@ document.getElementById('app').addEventListener('click', function (e) {
   else if (d.act === 'closeall') { S.open = {}; S.open[S.focus] = true; }
   else if (d.act === 'allmonth') S.month = '';
   else if (d.act === 'hist') S.histAll = S.histAll === S.sel.id ? '' : S.sel.id;
+  else if (!TRUST_READY && /^trust/.test(d.act || '')) {}
   else if (d.act === 'trust') { S.page = 'trust'; S.tr = { mode: 'apply', loading: true }; trustRun('orgTrustPrepare'); }
   else if (d.act === 'trustoff') { S.page = 'trust'; S.tr = { mode: 'cancel' }; }
   else if (d.act === 'trustgo' && !S.tr.busy) { S.tr.busy = true; trustRun('orgTrustApply'); }
