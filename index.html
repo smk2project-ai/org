@@ -647,10 +647,10 @@ function homePage(f, down, cons) {
     tile('紹介した代理店', kids[f.code].length, '名', '組織全体 ' + down.length + '名', 'tree') +
     tile('組織の契約', cons.length, '件', consWait ? '手続き中 ' + consWait + '件' : 'すべて手続き済み', 'contracts', consWait ? 'wait' : '') +
     '</div>';
-  // 担当アドバイザーの人だけ：本申込の前のお客様の申込を直す（積立申込サイトの修正画面が新しいタブで開く）
+  // 本申込の前のお客様の申込（担当アドバイザーか紹介者のもの）の契約情報を直す（積立申込サイトの修正画面が新しいタブで開く）
   if (D.advisor && f.code === D.me) {
     h += '<div class="sec">お客様の申込</div><div style="padding:12px 14px;background:#fff;border:1px solid #e3e6ee;border-radius:12px;margin:0 0 12px">' +
-      '<p style="margin:0 0 8px;font-size:13px">あなたが担当アドバイザーの申込で、まだ本申込に入っていないものを直せます。</p>' +
+      '<p style="margin:0 0 8px;font-size:13px">あなたが担当アドバイザーか紹介者のお客様で、まだ本申込に入っていない申込の契約情報（積立年数・支払い頻度・積立額・ファンド割合）を直せます。</p>' +
       '<button class="main" data-act="appedit">お客様の申込を直す</button></div>';
   }
   return h;
