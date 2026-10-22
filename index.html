@@ -647,6 +647,12 @@ function homePage(f, down, cons) {
     tile('紹介した代理店', kids[f.code].length, '名', '組織全体 ' + down.length + '名', 'tree') +
     tile('組織の契約', cons.length, '件', consWait ? '手続き中 ' + consWait + '件' : 'すべて手続き済み', 'contracts', consWait ? 'wait' : '') +
     '</div>';
+  // 担当アドバイザーの人だけ：本申込の前のお客様の申込を直す（積立申込サイトの修正画面が新しいタブで開く）
+  if (D.advisor && f.code === D.me) {
+    h += '<div class="sec">お客様の申込</div><div style="padding:12px 14px;background:#fff;border:1px solid #e3e6ee;border-radius:12px;margin:0 0 12px">' +
+      '<p style="margin:0 0 8px;font-size:13px">あなたが担当アドバイザーの申込で、まだ本申込に入っていないものを直せます。</p>' +
+      '<button class="main" data-act="appedit">お客様の申込を直す</button></div>';
+  }
   return h;
 }
 // 金のカード：見込み報酬（いちばん大きく）・レベル・ポイント。押すと報酬／ポイントのページへ
@@ -1280,6 +1286,14 @@ document.getElementById('app').addEventListener('click', function (e) {
   else if (d.act === 'allmonth') S.month = '';
   else if (d.act === 'hist') S.histAll = S.histAll === S.sel.id ? '' : S.sel.id;
   else if (!TRUST_READY && /^trust/.test(d.act || '')) {}
+  else if (d.act === 'appedit') {
+    if (!LIVE) { alert('見本では開けません。'); return; }
+    var w = window.open('', '_blank');   // 先に窓を開ける（あとから開くとブラウザに止められることがある）
+    call('orgEditLink', [getToken()], function (res) {
+      if (res && res.ok) { if (w) w.location.href = res.url; else location.href = res.url; }
+      else { if (w) w.close(); alert((res && res.message) || '開けませんでした。'); }
+    }, function (m) { if (w) w.close(); alert(m); });
+  }
   else if (d.act === 'trust') { S.page = 'trust'; S.tr = { mode: 'apply', loading: true }; trustRun('orgTrustPrepare'); }
   else if (d.act === 'trustoff') { S.page = 'trust'; S.tr = { mode: 'cancel' }; }
   else if (d.act === 'trustgo' && !S.tr.busy) { S.tr.busy = true; trustRun('orgTrustApply'); }
