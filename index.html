@@ -620,7 +620,7 @@ var PAGES = [
   { id: 'reward', label: '報酬', icon: '<path d="M6 3l6 8 6-8M5 11h14M5 15h14M12 11v10"/>' },
   { id: 'points', label: 'ポイント', icon: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>' }
 ];
-var PAGE_TABS = { org: ['tree', 'agents'], customers: ['contracts', 'wait', 'months'] };
+var PAGE_TABS = { org: ['tree', 'agents'], customers: ['contracts', 'wait', 'months', 'pre'] };
 
 function render() {
   var f = byCode[S.focus], down = under(S.focus), scope = [S.focus].concat(down);
@@ -640,7 +640,7 @@ function render() {
     h += '<div class="tools"><input type="search" id="q" placeholder="' + (S.page === 'org' ? '名前・代理店コードで検索' : '契約者・紹介者で検索') + '" value="' + esc(S.q) + '"></div>';
     h += '<div class="tabs">' + (S.page === 'org'
       ? tab('tree', '組織図') + tab('agents', '代理店一覧')
-      : tab('contracts', '契約') + tab('wait', '手続き中', cons.filter(function (k) { return !k.act; }).length) + tab('months', '月ごと')) + '</div>';
+      : tab('contracts', '契約') + tab('wait', '手続き中', cons.filter(function (k) { return !k.act; }).length) + tab('months', '月ごと') + tab('pre', '申込前', preOf(scope).length)) + '</div>';
     h += '<div class="cols' + (isChart() ? ' wide' : '') + '"><div class="panel" id="left">' + leftPanel(scope, cons) + '</div>' +
       '<div class="panel" id="detail">' + detailPanel() + '</div></div>';
   }
@@ -1056,6 +1056,7 @@ function leftPanel(scope, cons) {
   if (S.tab === 'contracts') return contractsPanel(cons, true);
   if (S.tab === 'wait') return contractsPanel(cons, false);
   if (S.tab === 'months') return monthsPanel(cons);
+  if (S.tab === 'pre') return prePanel(scope);
   return treePanel(scope);
 }
 
@@ -1256,6 +1257,27 @@ function stepsDetail(st) {
     '<dt>6 保険会社の電話</dt><dd>' + dated(st.telDate, st.telSt) + '</dd>' +
     '<dt>10 合意書（BS）</dt><dd>' + state(st.bs) + '</dd>' +
     '</dl>';
+}
+
+/* ================= 申込前のお客様（公式LINEのお客様登録。11/19） ================= */
+function preOf(scope) {
+  var set = {}; scope.forEach(function (c) { set[c] = true; });
+  return (D.entries || []).filter(function (x) { return (set[x.intro] || set[x.adv]) && hit(x.name + x.introName + x.advName); });
+}
+var PRE_STEPS = ['登録', '予約', '仮申込', '本申込', '初回決済'];
+function prePanel(scope) {
+  var list = preOf(scope);
+  if (!list.length) return '<p style="padding:14px;color:#777;font-size:13px">まだいません。ホームの「お客様登録のQRを出す」から、お客様にLINE登録してもらうとここに出ます。</p>';
+  return list.map(function (x) {
+    var at = x.state === '仮申込' ? 2 : x.state === '本申込' ? 3 : x.state === '初回決済' ? 4 : x.zoom ? 1 : 0;
+    return '<div style="padding:12px 14px;border-bottom:1px solid #eef0f4">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(x.name) + ' 様</b><span style="font-size:12px;color:#777">' + esc(x.date) + ' 登録</span></div>' +
+      '<div style="font-size:12.5px;color:#555;margin-top:2px">紹介 ' + esc(x.introName || '-') + '　担当 ' + esc(x.advName || '-') + '　' + esc(x.mode || '') + '</div>' +
+      '<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">' + PRE_STEPS.map(function (s, i) {
+        return '<span style="font-size:11.5px;padding:2px 8px;border-radius:999px;' + (i <= at ? 'background:#e2f7ea;color:#0a7d3b;font-weight:700' : 'background:#f1f2f5;color:#999') + '">' + s + '</span>';
+      }).join('') + '</div>' +
+      '<div style="font-size:12.5px;margin-top:6px">準備 ' + esc(x.prep) + (x.zoom ? '　Zoom ' + esc(x.zoom) : '') + '</div></div>';
+  }).join('');
 }
 
 /* ================= お客様登録のQR（11/19） ================= */
