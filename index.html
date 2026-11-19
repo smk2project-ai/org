@@ -11,6 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root {
     --navy: #14315c;
@@ -301,6 +302,20 @@
   .modal p { margin: 0 0 10px; font-size: 14px; }
   .modal .err { color: var(--red); min-height: 1.4em; }
   .modal .act { display: flex; gap: 8px; justify-content: flex-end; }
+  /* お客様登録のQR（11/19） */
+  .eqr .box { max-height: 92vh; overflow-y: auto; }
+  .eqr h2 { color: var(--ink, #111); }
+  .eqr label.f { display: block; font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
+  .eqr input[type=search] { width: 100%; padding: 9px 10px; border: 1px solid #d6d9e0; border-radius: 8px; font-size: 15px; }
+  .eqr .cands { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 160px; overflow-y: auto; }
+  .eqr .cands button { text-align: left; border: 1px solid #e3e6ee; background: #fff; border-radius: 8px; padding: 7px 10px; font-size: 14px; cursor: pointer; }
+  .eqr .cands button.on { border-color: #06c755; background: #e2f7ea; font-weight: 700; }
+  .eqr .seg2 { display: flex; gap: 6px; }
+  .eqr .seg2 button { flex: 1; border: 1px solid #d6d9e0; background: #fff; border-radius: 8px; padding: 8px 6px; font-size: 13px; cursor: pointer; line-height: 1.4; }
+  .eqr .seg2 button.on { border-color: #06c755; background: #e2f7ea; font-weight: 700; }
+  .eqr .qrbox { display: flex; justify-content: center; margin: 14px 0 6px; }
+  .eqr .qrbox img, .eqr .qrbox canvas { width: 220px !important; height: 220px !important; }
+  .eqr .who2 { text-align: center; font-size: 13px; color: #555; }
   /* トップへ戻る（下にスクロールしたときだけ出る） */
   .totop { position: fixed; right: 18px; bottom: 22px; z-index: 30; border: none; border-radius: 999px; background: var(--navy); color: #fff;
     padding: 10px 16px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 12px rgba(20, 49, 92, .3); display: flex; align-items: center; gap: 6px;
@@ -647,6 +662,12 @@ function homePage(f, down, cons) {
     tile('紹介した代理店', kids[f.code].length, '名', '組織全体 ' + down.length + '名', 'tree') +
     tile('組織の契約', cons.length, '件', consWait ? '手続き中 ' + consWait + '件' : 'すべて手続き済み', 'contracts', consWait ? 'wait' : '') +
     '</div>';
+  // 公式LINEのお客様登録のQR（プレゼンのあとお客様に読んでもらう。11/19）
+  if (f.code === D.me) {
+    h += '<div class="sec">お客様のLINE登録</div><div style="padding:12px 14px;background:#fff;border:1px solid #e3e6ee;border-radius:12px;margin:0 0 12px">' +
+      '<p style="margin:0 0 8px;font-size:13px">プレゼンのあと、お客様にQRをLINEのカメラで読んでもらいます。紹介者が入った状態で公式LINEに登録され、準備リストが届きます。</p>' +
+      '<button class="main" data-act="entryqr">お客様登録のQRを出す</button></div>';
+  }
   // 本申込の前のお客様の申込（担当アドバイザーか紹介者のもの）の契約情報を直す（積立申込サイトの修正画面が新しいタブで開く）
   if (D.advisor && f.code === D.me) {
     h += '<div class="sec">お客様の申込</div><div style="padding:12px 14px;background:#fff;border:1px solid #e3e6ee;border-radius:12px;margin:0 0 12px">' +
@@ -1237,6 +1258,48 @@ function stepsDetail(st) {
     '</dl>';
 }
 
+/* ================= お客様登録のQR（11/19） ================= */
+// QR＝ご契約者様専用サポートの LIFF。a＝担当アドバイザー（ログインした本人）、r＝紹介者、m＝初めに選んでおく進め方（a＝Zoomでまとめて、b＝確認Zoom）
+var ENTRY_LIFF = 'https://liff.line.me/2012122819-xI2sFrfF';
+function entryQr() {
+  var me = D.me, pool = [me].concat(under(me)).filter(function (c) { return byCode[c] && !coHidden(c); });
+  var st = { r: coHidden(me) ? '' : me, m: 'a', q: '' };
+  try { st.m = localStorage.getItem('entryMode') === 'b' ? 'b' : 'a'; } catch (_) {}
+  var m = document.createElement('div');
+  m.className = 'modal eqr';
+  m.innerHTML = '<div class="box"><h2>お客様登録のQR</h2>' +
+    '<label class="f" for="eqq">紹介者</label><input type="search" id="eqq" placeholder="名前・代理店コードで探す"><div class="cands" id="eqc"></div>' +
+    '<label class="f">初めに選んでおく進め方 <small style="font-weight:400">（お客様が変えられます）</small></label>' +
+    '<div class="seg2"><button data-m="a">Zoomでまとめて申込<br><small>内山さんと一緒に</small></button><button data-m="b">確認Zoom<br><small>アドバイザーが仮申込を入力</small></button></div>' +
+    '<div class="qrbox" id="eqr"></div><div class="who2" id="eqw"></div>' +
+    '<div class="act" style="margin-top:12px"><button class="ghost" id="eqcopy">URLをコピー</button><button class="main" id="eqclose">閉じる</button></div></div>';
+  document.body.appendChild(m);
+  var $q = function (id) { return document.getElementById(id); };
+  function url() { return ENTRY_LIFF + '?a=' + encodeURIComponent(me) + (st.r ? '&r=' + encodeURIComponent(st.r) : '') + '&m=' + st.m; }
+  function draw() {
+    var list = pool.filter(function (c) { return !st.q || (byCode[c].name + c).toLowerCase().indexOf(st.q.toLowerCase()) !== -1; }).slice(0, 30);
+    $q('eqc').innerHTML = list.map(function (c) {
+      return '<button data-r="' + esc(c) + '" class="' + (c === st.r ? 'on' : '') + '">' + esc(byCode[c].name) + '（' + esc(c) + '）' + (c === me ? '　自分' : '') + '</button>';
+    }).join('') || '<p style="font-size:13px;color:#777;margin:4px 0">見つかりません。組織の外の人のときは、選ばずにQRを出すとお客様が名前を入れます。</p>';
+    m.querySelectorAll('.seg2 button').forEach(function (b) { b.className = b.dataset.m === st.m ? 'on' : ''; });
+    $q('eqr').innerHTML = '';
+    try { new QRCode($q('eqr'), { text: url(), width: 440, height: 440, correctLevel: QRCode.CorrectLevel.M }); } catch (_) { $q('eqr').textContent = 'QRを作れませんでした。URLをコピーしてお送りください。'; }
+    $q('eqw').textContent = '紹介者：' + (st.r ? byCode[st.r].name : '（お客様が入力）') + '　担当：' + (coHidden(me) ? '会社' : byCode[me].name);
+  }
+  $q('eqq').oninput = function () { st.q = this.value.trim(); draw(); };
+  m.addEventListener('click', function (e) {
+    var r = e.target.closest('[data-r]'), mm = e.target.closest('[data-m]');
+    if (r) { st.r = st.r === r.dataset.r ? '' : r.dataset.r; draw(); }
+    else if (mm) { st.m = mm.dataset.m; try { localStorage.setItem('entryMode', st.m); } catch (_) {} draw(); }
+    else if (e.target === m || e.target.id === 'eqclose') m.remove();
+    else if (e.target.id === 'eqcopy') {
+      var u = url();
+      try { navigator.clipboard.writeText(u).then(function () { e.target.textContent = 'コピーしました'; }, function () { prompt('URL', u); }); } catch (_) { prompt('URL', u); }
+    }
+  });
+  draw();
+}
+
 /* ================= 操作 ================= */
 document.getElementById('app').addEventListener('click', function (e) {
   var el = e.target.closest('[data-histd],[data-rwmonth],[data-rwagent],[data-paykubun],[data-paymode],[data-paymonth],[data-payagent],[data-page],[data-tab],[data-tog],[data-agent],[data-contract],[data-focus],[data-act],[data-month],[data-view],[data-zoom],[data-kubun],[data-go]');
@@ -1286,6 +1349,7 @@ document.getElementById('app').addEventListener('click', function (e) {
   else if (d.act === 'allmonth') S.month = '';
   else if (d.act === 'hist') S.histAll = S.histAll === S.sel.id ? '' : S.sel.id;
   else if (!TRUST_READY && /^trust/.test(d.act || '')) {}
+  else if (d.act === 'entryqr') { entryQr(); return; }
   else if (d.act === 'appedit') {
     if (!LIVE) { alert('見本では開けません。'); return; }
     var w = window.open('', '_blank');   // 先に窓を開ける（あとから開くとブラウザに止められることがある）
