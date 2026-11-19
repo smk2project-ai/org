@@ -1294,12 +1294,15 @@ document.addEventListener('click', function (e) {
 var ENTRY_LIFF = 'https://liff.line.me/2012122819-xI2sFrfF';
 function entryQr() {
   var me = D.me, pool = [me].concat(under(me)).filter(function (c) { return byCode[c] && !coHidden(c); });
-  var st = { r: coHidden(me) ? '' : me, m: 'a', q: '' };
+  var advs = D.advisors || [];
+  var isAdv = advs.some(function (a) { return a.code === me; });
+  var st = { r: coHidden(me) ? '' : me, m: 'a', q: '', a: isAdv ? me : '' };   // 担当アドバイザーは決まった人だけ（11/19）。本人がアドバイザーなら本人
   try { var lm = localStorage.getItem('entryMode'); st.m = lm === 'b1' || lm === 'b0' ? lm : 'a'; } catch (_) {}
   var m = document.createElement('div');
   m.className = 'modal eqr';
   m.innerHTML = '<div class="box"><h2>お客様登録のQR</h2>' +
     '<label class="f" for="eqq">紹介者</label><input type="search" id="eqq" placeholder="名前・代理店コードで探す"><div class="cands" id="eqc"></div>' +
+    '<label class="f">担当アドバイザー</label><div class="cands" id="eqa" style="max-height:none;flex-direction:row;flex-wrap:wrap"></div>' +
     '<label class="f">初めに選んでおく進め方 <small style="font-weight:400">（お客様が変えられます）</small></label>' +
     '<div class="seg2"><button data-m="a">Zoomでまとめて<br><small>内山さんと仮申込から</small></button><button data-m="b1">仮申込＋確認Zoom<br><small>アドバイザーが入力</small></button><button data-m="b0">仮申込のみ<br><small>確認Zoomなし</small></button></div>' +
     '<p style="font-size:12px;color:#666;margin:6px 0 0">確認Zoomなしでも、あとから予約サイトや「申込前」の予約リンクで予約できます。</p>' +
@@ -1307,21 +1310,28 @@ function entryQr() {
     '<div class="act" style="margin-top:12px"><button class="ghost" id="eqcopy">URLをコピー</button><button class="main" id="eqclose">閉じる</button></div></div>';
   document.body.appendChild(m);
   var $q = function (id) { return document.getElementById(id); };
-  function url() { return ENTRY_LIFF + '?a=' + encodeURIComponent(me) + (st.r ? '&r=' + encodeURIComponent(st.r) : '') + (st.m === 'a' ? '&m=a' : '&m=b&z=' + (st.m === 'b1' ? '1' : '0')); }
+  function url() { return ENTRY_LIFF + '?a=' + encodeURIComponent(st.a) + (st.r ? '&r=' + encodeURIComponent(st.r) : '') + (st.m === 'a' ? '&m=a' : '&m=b&z=' + (st.m === 'b1' ? '1' : '0')); }
   function draw() {
     var list = pool.filter(function (c) { return !st.q || (byCode[c].name + c).toLowerCase().indexOf(st.q.toLowerCase()) !== -1; }).slice(0, 30);
     $q('eqc').innerHTML = list.map(function (c) {
       return '<button data-r="' + esc(c) + '" class="' + (c === st.r ? 'on' : '') + '">' + esc(byCode[c].name) + '（' + esc(c) + '）' + (c === me ? '　自分' : '') + '</button>';
     }).join('') || '<p style="font-size:13px;color:#777;margin:4px 0">見つかりません。組織の外の人のときは、選ばずにQRを出すとお客様が名前を入れます。</p>';
     m.querySelectorAll('.seg2 button').forEach(function (b) { b.className = b.dataset.m === st.m ? 'on' : ''; });
+    $q('eqa').innerHTML = advs.map(function (a) {
+      return '<button data-adv="' + esc(a.code) + '" class="' + (a.code === st.a ? 'on' : '') + '">' + esc(a.name) + '</button>';
+    }).join('') || '<p style="font-size:13px;color:#777;margin:4px 0">アドバイザーの一覧が読めませんでした。</p>';
     $q('eqr').innerHTML = '';
+    if (!st.a) { $q('eqr').innerHTML = '<p style="font-size:14px;color:#b3261e;margin:20px 0">担当アドバイザーを選ぶとQRが出ます。</p>'; $q('eqw').textContent = ''; $q('eqcopy').disabled = true; return; }
+    $q('eqcopy').disabled = false;
     try { new QRCode($q('eqr'), { text: url(), width: 440, height: 440, correctLevel: QRCode.CorrectLevel.M }); } catch (_) { $q('eqr').textContent = 'QRを作れませんでした。URLをコピーしてお送りください。'; }
-    $q('eqw').textContent = '紹介者：' + (st.r ? byCode[st.r].name : '（お客様が入力）') + '　担当：' + (coHidden(me) ? '会社' : byCode[me].name);
+    var an = advs.filter(function (a) { return a.code === st.a; })[0];
+    $q('eqw').textContent = '紹介者：' + (st.r ? byCode[st.r].name : '（お客様が入力）') + '　担当：' + (an ? an.name : st.a);
   }
   $q('eqq').oninput = function () { st.q = this.value.trim(); draw(); };
   m.addEventListener('click', function (e) {
-    var r = e.target.closest('[data-r]'), mm = e.target.closest('[data-m]');
-    if (r) { st.r = st.r === r.dataset.r ? '' : r.dataset.r; draw(); }
+    var r = e.target.closest('[data-r]'), mm = e.target.closest('[data-m]'), ad = e.target.closest('[data-adv]');
+    if (ad) { st.a = ad.dataset.adv; draw(); }
+    else if (r) { st.r = st.r === r.dataset.r ? '' : r.dataset.r; draw(); }
     else if (mm) { st.m = mm.dataset.m; try { localStorage.setItem('entryMode', st.m); } catch (_) {} draw(); }
     else if (e.target === m || e.target.id === 'eqclose') m.remove();
     else if (e.target.id === 'eqcopy') {
