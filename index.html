@@ -1294,9 +1294,13 @@ document.addEventListener('click', function (e) {
 var ENTRY_LIFF = 'https://liff.line.me/2012122819-xI2sFrfF';
 function entryQr() {
   var me = D.me, pool = [me].concat(under(me)).filter(function (c) { return byCode[c] && !coHidden(c); });
-  var advs = D.advisors || [];
-  var isAdv = advs.some(function (a) { return a.code === me; });
-  var st = { r: coHidden(me) ? '' : me, m: 'a', q: '', a: isAdv ? me : '' };   // 担当アドバイザーは決まった人だけ（11/19）。本人がアドバイザーなら本人
+  var allAdvs = D.advisors || [];
+  // 出すアドバイザー：松下・内山はいつも、自分から上の線の人、自分より下で選んだ紹介者の上にいる人（11/19）
+  function chainOf(c) { var s = {}, n = 0; while (c && byCode[c] && !s[c] && n < 50) { s[c] = true; if (c === me) break; c = byCode[c].parent; n++; } return s; }
+  function advsNow() { var ch = chainOf(st.r || me); return allAdvs.filter(function (a) { return a.always || a.up || ch[a.code]; }); }
+  var st = { r: coHidden(me) ? '' : me, m: 'a', q: '', a: '' };
+  function fixAdv() { var list = advsNow(); if (!list.some(function (a) { return a.code === st.a; })) st.a = list.some(function (a) { return a.code === me; }) ? me : ''; }
+  fixAdv();   // 本人がアドバイザーなら本人
   try { var lm = localStorage.getItem('entryMode'); st.m = lm === 'b1' || lm === 'b0' ? lm : 'a'; } catch (_) {}
   var m = document.createElement('div');
   m.className = 'modal eqr';
@@ -1317,6 +1321,8 @@ function entryQr() {
       return '<button data-r="' + esc(c) + '" class="' + (c === st.r ? 'on' : '') + '">' + esc(byCode[c].name) + '（' + esc(c) + '）' + (c === me ? '　自分' : '') + '</button>';
     }).join('') || '<p style="font-size:13px;color:#777;margin:4px 0">見つかりません。組織の外の人のときは、選ばずにQRを出すとお客様が名前を入れます。</p>';
     m.querySelectorAll('.seg2 button').forEach(function (b) { b.className = b.dataset.m === st.m ? 'on' : ''; });
+    fixAdv();
+    var advs = advsNow();
     $q('eqa').innerHTML = advs.map(function (a) {
       return '<button data-adv="' + esc(a.code) + '" class="' + (a.code === st.a ? 'on' : '') + '">' + esc(a.name) + '</button>';
     }).join('') || '<p style="font-size:13px;color:#777;margin:4px 0">アドバイザーの一覧が読めませんでした。</p>';
