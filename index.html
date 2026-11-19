@@ -311,7 +311,7 @@
   .eqr .cands button { text-align: left; border: 1px solid #e3e6ee; background: #fff; border-radius: 8px; padding: 7px 10px; font-size: 14px; cursor: pointer; }
   .eqr .cands button.on { border-color: #06c755; background: #e2f7ea; font-weight: 700; }
   .eqr .seg2 { display: flex; gap: 6px; }
-  .eqr .seg2 button { flex: 1; border: 1px solid #d6d9e0; background: #fff; border-radius: 8px; padding: 8px 6px; font-size: 13px; cursor: pointer; line-height: 1.4; }
+  .eqr .seg2 button { flex: 1; min-width: 0; border: 1px solid #d6d9e0; background: #fff; border-radius: 8px; padding: 8px 6px; font-size: 13px; cursor: pointer; line-height: 1.4; }
   .eqr .seg2 button.on { border-color: #06c755; background: #e2f7ea; font-weight: 700; }
   .eqr .qrbox { display: flex; justify-content: center; margin: 14px 0 6px; }
   .eqr .qrbox img, .eqr .qrbox canvas { width: 220px !important; height: 220px !important; }
@@ -1276,9 +1276,18 @@ function prePanel(scope) {
       '<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">' + PRE_STEPS.map(function (s, i) {
         return '<span style="font-size:11.5px;padding:2px 8px;border-radius:999px;' + (i <= at ? 'background:#e2f7ea;color:#0a7d3b;font-weight:700' : 'background:#f1f2f5;color:#999') + '">' + s + '</span>';
       }).join('') + '</div>' +
-      '<div style="font-size:12.5px;margin-top:6px">準備 ' + esc(x.prep) + (x.zoom ? '　Zoom ' + esc(x.zoom) : '') + '</div></div>';
+      '<div style="font-size:12.5px;margin-top:6px">準備 ' + esc(x.prep) + (x.zoom ? '　Zoom ' + esc(x.zoom) : '') + (x.zoomFlag ? '　確認Zoom ' + esc(x.zoomFlag) : '') + '</div>' +
+      (x.mode === 'アドバイザーと仮申込' && !x.zoom && x.key ? '<button class="mini" style="margin-top:8px" data-zlink="' + esc(x.key) + '">確認Zoomの予約リンクをコピー</button>' : '') + '</div>';
   }).join('');
 }
+
+// 申込前のお客様の確認Zoomの予約リンク（お客様に送る・アドバイザーがそのまま予約する。11/19）
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-zlink]');
+  if (!b) return;
+  var u = 'https://smk2project-ai.github.io/yoyaku/?a=CP-1&kd=' + encodeURIComponent('本申込事前確認') + '&e=' + encodeURIComponent(b.dataset.zlink);
+  try { navigator.clipboard.writeText(u).then(function () { b.textContent = 'コピーしました（お客様に送るか、そのまま開いて予約）'; }, function () { prompt('URL', u); }); } catch (_) { prompt('URL', u); }
+});
 
 /* ================= お客様登録のQR（11/19） ================= */
 // QR＝ご契約者様専用サポートの LIFF。a＝担当アドバイザー（ログインした本人）、r＝紹介者、m＝初めに選んでおく進め方（a＝Zoomでまとめて、b＝確認Zoom）
@@ -1286,18 +1295,19 @@ var ENTRY_LIFF = 'https://liff.line.me/2012122819-xI2sFrfF';
 function entryQr() {
   var me = D.me, pool = [me].concat(under(me)).filter(function (c) { return byCode[c] && !coHidden(c); });
   var st = { r: coHidden(me) ? '' : me, m: 'a', q: '' };
-  try { st.m = localStorage.getItem('entryMode') === 'b' ? 'b' : 'a'; } catch (_) {}
+  try { var lm = localStorage.getItem('entryMode'); st.m = lm === 'b1' || lm === 'b0' ? lm : 'a'; } catch (_) {}
   var m = document.createElement('div');
   m.className = 'modal eqr';
   m.innerHTML = '<div class="box"><h2>お客様登録のQR</h2>' +
     '<label class="f" for="eqq">紹介者</label><input type="search" id="eqq" placeholder="名前・代理店コードで探す"><div class="cands" id="eqc"></div>' +
     '<label class="f">初めに選んでおく進め方 <small style="font-weight:400">（お客様が変えられます）</small></label>' +
-    '<div class="seg2"><button data-m="a">Zoomでまとめて申込<br><small>内山さんと一緒に</small></button><button data-m="b">確認Zoom<br><small>アドバイザーが仮申込を入力</small></button></div>' +
+    '<div class="seg2"><button data-m="a">Zoomでまとめて<br><small>内山さんと仮申込から</small></button><button data-m="b1">仮申込＋確認Zoom<br><small>アドバイザーが入力</small></button><button data-m="b0">仮申込のみ<br><small>確認Zoomなし</small></button></div>' +
+    '<p style="font-size:12px;color:#666;margin:6px 0 0">確認Zoomなしでも、あとから予約サイトや「申込前」の予約リンクで予約できます。</p>' +
     '<div class="qrbox" id="eqr"></div><div class="who2" id="eqw"></div>' +
     '<div class="act" style="margin-top:12px"><button class="ghost" id="eqcopy">URLをコピー</button><button class="main" id="eqclose">閉じる</button></div></div>';
   document.body.appendChild(m);
   var $q = function (id) { return document.getElementById(id); };
-  function url() { return ENTRY_LIFF + '?a=' + encodeURIComponent(me) + (st.r ? '&r=' + encodeURIComponent(st.r) : '') + '&m=' + st.m; }
+  function url() { return ENTRY_LIFF + '?a=' + encodeURIComponent(me) + (st.r ? '&r=' + encodeURIComponent(st.r) : '') + (st.m === 'a' ? '&m=a' : '&m=b&z=' + (st.m === 'b1' ? '1' : '0')); }
   function draw() {
     var list = pool.filter(function (c) { return !st.q || (byCode[c].name + c).toLowerCase().indexOf(st.q.toLowerCase()) !== -1; }).slice(0, 30);
     $q('eqc').innerHTML = list.map(function (c) {
