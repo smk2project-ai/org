@@ -669,6 +669,12 @@ function homePage(f, down, cons) {
       '<p style="margin:0 0 8px;font-size:13px">プレゼンのあと、お客様にQRをLINEのカメラで読んでもらいます。紹介者が入った状態で公式LINEに登録され、準備リストが届きます。</p>' +
       '<button class="main" data-act="entryqr">お客様登録のQRを出す</button></div>';
   }
+  // お客様の代わりに、不備の書類・入力（カード情報など）を出す。担当アドバイザーだけ（11/20）
+  if (D.docAdvisor && f.code === D.me) {
+    h += '<div class="sec">お客様の書類・ご入力</div><div style="padding:12px 14px;background:#fff;border:1px solid #e3e6ee;border-radius:12px;margin:0 0 12px">' +
+      '<p style="margin:0 0 8px;font-size:13px">あなたが担当アドバイザーのお客様で、事務局からお願いしている書類やご入力（カード情報など）を、お客様の代わりに出せます。お客様の生年月日は要りません。</p>' +
+      '<button class="main" data-act="docedit">お客様の書類・ご入力の続き</button></div>';
+  }
   // 本申込の前のお客様の申込（担当アドバイザーか紹介者のもの）の契約情報を直す（積立申込サイトの修正画面が新しいタブで開く）
   if (D.advisor && f.code === D.me) {
     h += '<div class="sec">お客様の申込</div><div style="padding:12px 14px;background:#fff;border:1px solid #e3e6ee;border-radius:12px;margin:0 0 12px">' +
@@ -1413,6 +1419,14 @@ document.getElementById('app').addEventListener('click', function (e) {
   else if (d.act === 'hist') S.histAll = S.histAll === S.sel.id ? '' : S.sel.id;
   else if (!TRUST_READY && /^trust/.test(d.act || '')) {}
   else if (d.act === 'entryqr') { entryQr(); return; }
+  else if (d.act === 'docedit') {
+    if (!LIVE) { alert('見本では開けません。'); return; }
+    var w2 = window.open('', '_blank');
+    call('orgDocLink', [getToken()], function (res) {
+      if (res && res.ok) { if (w2) w2.location.href = res.url; else location.href = res.url; }
+      else { if (w2) w2.close(); alert((res && res.message) || '開けませんでした。'); }
+    }, function (m) { if (w2) w2.close(); alert(m); });
+  }
   else if (d.act === 'appedit') {
     if (!LIVE) { alert('見本では開けません。'); return; }
     var w = window.open('', '_blank');   // 先に窓を開ける（あとから開くとブラウザに止められることがある）
